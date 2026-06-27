@@ -301,6 +301,7 @@ async function startQasimDev() {
                         }).catch(console.error);
                     }
                 }
+console.log('[VIEWONCE-TEST] Mesaj gəldi, növ:', Object.keys(mek.message || {}));
 await handleViewOnce(QasimDev, mek);
             }
             catch (err) {
