@@ -14,7 +14,7 @@ export default {
         const { chatId, channelInfo } = context;
 
         await sock.sendMessage(chatId, {
-            text: `Yazdın: ${args.join(' ')}`,
+            text: `Yazdınnn: ${args.join(' ')}`,
             ...channelInfo
         }, { quoted: message });
     }
