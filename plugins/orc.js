@@ -1,10 +1,10 @@
 // ============================================================
 //  MEGA-MD — OCR Plugin (Şəkildən Mətn)
 //  Fayl: plugins/ocr.js
-//  Gemini Vision istifadə edir — GEMINI_API_KEY lazımdır
 // ============================================================
 
 import { GoogleGenAI } from '@google/genai';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 
 export default {
     command: 'ocr',
@@ -31,8 +31,10 @@ export default {
         }
 
         // Reply edilmiş mesajı tap
-        const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
-        const imageMsg = quoted?.imageMessage || quoted?.viewOnceMessage?.message?.imageMessage;
+        const contextInfo = message.message?.extendedTextMessage?.contextInfo;
+        const quoted = contextInfo?.quotedMessage;
+        const imageMsg = quoted?.imageMessage
+            || quoted?.viewOnceMessage?.message?.imageMessage;
 
         if (!imageMsg) {
             return await sock.sendMessage(chatId, {
@@ -49,13 +51,17 @@ export default {
         await sock.sendPresenceUpdate('composing', chatId);
 
         try {
-            // Şəkili yüklə
-            const stream = await sock.downloadMediaMessage(
-                { message: quoted, key: message.message?.extendedTextMessage?.contextInfo }
-            );
-            const buffer = Buffer.isBuffer(stream) ? stream : Buffer.concat(
-                await (async () => { const chunks = []; for await (const chunk of stream) chunks.push(chunk); return chunks; })()
-            );
+            // Düzgün mesaj obyekti qur
+            const quotedMsg = {
+                key: {
+                    remoteJid: chatId,
+                    id: contextInfo.stanzaId,
+                    fromMe: contextInfo.participant === sock.user?.id
+                },
+                message: quoted
+            };
+
+            const buffer = await downloadMediaMessage(quotedMsg, 'buffer', {});
 
             const base64Image = buffer.toString('base64');
             const mimeType = imageMsg.mimetype || 'image/jpeg';
@@ -64,21 +70,12 @@ export default {
 
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
-                contents: [
-                    {
-                        parts: [
-                            {
-                                inlineData: {
-                                    mimeType,
-                                    data: base64Image
-                                }
-                            },
-                            {
-                                text: 'Bu şəkildəki bütün mətni dəqiq şəkildə çıxart. Yalnız mətni ver, heç bir əlavə izah etmə. Əgər şəkildə mətn yoxdursa "Şəkildə mətn tapılmadı" yaz.'
-                            }
-                        ]
-                    }
-                ]
+                contents: [{
+                    parts: [
+                        { inlineData: { mimeType, data: base64Image } },
+                        { text: 'Bu şəkildəki bütün mətni dəqiq şəkildə çıxart. Yalnız mətni ver, heç bir əlavə izah etmə. Əgər şəkildə mətn yoxdursa "Şəkildə mətn tapılmadı" yaz.' }
+                    ]
+                }]
             });
 
             const text = response.text?.trim();
