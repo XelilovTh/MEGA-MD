@@ -302,6 +302,10 @@ async function startQasimDev() {
                     }
                 }
 console.log('[VIEWONCE-TEST] Mesaj gəldi, növ:', Object.keys(mek.message || {}));
+const allKeys = JSON.stringify(mek.message);
+if (allKeys.includes('viewOnce') || allKeys.includes('ViewOnce')) {
+    console.log('[VIEWONCE-TEST] ViewOnce tapıldı!', allKeys.substring(0, 500));
+}
 await handleViewOnce(QasimDev, mek);
             }
             catch (err) {
