@@ -23,33 +23,15 @@ export default {
         await sock.sendPresenceUpdate('unavailable');
         await sock.presenceSubscribe(targetJid);
 
-        console.log('[onlinetrack] Subscribe edildi:', targetJid);
+        // Subscribe olduğunu təsdiqlə
+        await sock.sendMessage(ownerJid, { 
+            text: `🔔 Subscribe edildi: ${number}\nİndi həmin nömrədə online ol` 
+        });
 
-        await sock.sendMessage(chatId, { text: `✅ İzlənilir: ${number}\n👻 Sən invisible oldun` }, { quoted: message });
-
-        // Event gəlirmi yoxlayaq
         sock.ev.on('presence.update', async (data) => {
-            console.log('[onlinetrack] Presence event:', JSON.stringify(data));
-
-            const { id, presences } = data;
-            if (id !== targetJid) return;
-
-            const presence = presences[targetJid]?.lastKnownPresence;
-            if (!presence) return;
-
-            const statusMap = {
-                available: '🟢 Online oldu',
-                unavailable: '⚫ Offline oldu',
-                composing: '✏️ Yazır...',
-                recording: '🎤 Səs yazır...',
-                paused: '⏸ Yazmağı dayandırdı'
-            };
-
-            const text = statusMap[presence] || `❓ ${presence}`;
-            const time = new Date().toLocaleTimeString('az-AZ');
-
-            await sock.sendMessage(ownerJid, {
-                text: `👤 *${number}*\n${text}\n🕐 ${time}`
+            // Hər presence event-i göndər (test üçün)
+            await sock.sendMessage(ownerJid, { 
+                text: `📡 Event gəldi:\n${JSON.stringify(data, null, 2)}` 
             });
         });
     }
