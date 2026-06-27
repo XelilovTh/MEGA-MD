@@ -1,9 +1,17 @@
+// ============================================================
+//  MEGA-MD — Gemini AI Plugin (axios versiyası)
+//  Fayl: plugins/gemini.js
+//  Railway Variables-ə əlavə et: GEMINI_API_KEY=your_api_key
+//  Yeni paket lazım DEYİL — axios artıq quraşdırılıb
+// ============================================================
 
-// Hər istifadəçi üçün söhbət tarixçəsi saxlanılır (in-memory)
+import axios from 'axios';
+
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+
+// Hər istifadəçi üçün söhbət tarixçəsi (in-memory)
 const chatHistory = new Map();
-
-// Tarixçəni 30 dəqiqədən sonra sil (yaddaş idarəsi)
-const HISTORY_TTL = 30 * 60 * 1000;
+const HISTORY_TTL = 30 * 60 * 1000; // 30 dəqiqə
 const historyTimers = new Map();
 
 function resetTimer(userId) {
@@ -20,7 +28,7 @@ export default {
     aliases: ['ai', 'gemi', 'ask'],
     category: 'ai',
     description: 'Gemini AI ilə söhbət et. Kontekst 30 dəqiqə saxlanılır.',
-    usage: '.gemini <sualın> | .gemini reset (söhbəti sıfırla)',
+    usage: '.gemini <sualın> | .gemini reset',
 
     ownerOnly: false,
     groupOnly: false,
@@ -29,37 +37,20 @@ export default {
     cooldown: 3,
 
     async handler(sock, message, args, context = {}) {
-        const {
-            chatId,
-            senderId,
-            config,
-            channelInfo
-        } = context;
+        const { chatId, senderId, config, channelInfo } = context;
 
-        // ── API açarı yoxla ──────────────────────────────────
+        // API açarı yoxla
         const apiKey = process.env.GEMINI_API_KEY || config?.GEMINI_API_KEY;
         if (!apiKey) {
             return await sock.sendMessage(chatId, {
-                text: '❌ *GEMINI_API_KEY* tapılmadı!\n\n📝 Railway → Variables bölməsinə əlavə et:\n`GEMINI_API_KEY` = your_api_key_here\n\n🔗 API açarı al: https://aistudio.google.com/app/apikey',
-                ...channelInfo
-            }, { quoted: message });
-        }
-
-        // ── @google/generative-ai paketi yüklə ──────────────
-        let GoogleGenerativeAI;
-        try {
-            const mod = await import('@google/generative-ai');
-            GoogleGenerativeAI = mod.GoogleGenerativeAI;
-        } catch {
-            return await sock.sendMessage(chatId, {
-                text: '❌ Paket tapılmadı. Terminalda çalıştır:\n```\nnpm install @google/generative-ai\n```',
+                text: '❌ *GEMINI_API_KEY* tapılmadı!\n\nRailway → Variables bölməsinə əlavə et:\n`GEMINI_API_KEY` = AIza...\n\n🔗 https://aistudio.google.com/app/apikey',
                 ...channelInfo
             }, { quoted: message });
         }
 
         const input = args.join(' ').trim();
 
-        // ── Giriş yoxlanması ─────────────────────────────────
+        // Boş giriş
         if (!input) {
             return await sock.sendMessage(chatId, {
                 text: `🤖 *Gemini AI*\n\n*İstifadə:*\n• \`.gemini sualın\` — AI ilə söhbət et\n• \`.gemini reset\` — söhbəti sıfırla\n\n*Misal:*\n\`.gemini Azərbaycan haqqında məlumat ver\`\n\n💡 _Söhbət konteksti 30 dəqiqə saxlanılır_`,
@@ -67,7 +58,7 @@ export default {
             }, { quoted: message });
         }
 
-        // ── Söhbəti sıfırla ──────────────────────────────────
+        // Söhbəti sıfırla
         if (input.toLowerCase() === 'reset') {
             chatHistory.delete(senderId);
             if (historyTimers.has(senderId)) {
@@ -75,53 +66,65 @@ export default {
                 historyTimers.delete(senderId);
             }
             return await sock.sendMessage(chatId, {
-                text: '🔄 Söhbət tarixçəsi silindi. Yeni söhbətə başlaya bilərsən!',
+                text: '🔄 Söhbət tarixçəsi silindi!',
                 ...channelInfo
             }, { quoted: message });
         }
 
-        // ── "Yazır..." göstər ────────────────────────────────
         await sock.sendPresenceUpdate('composing', chatId);
 
         try {
-            const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({
-                model: 'gemini-1.5-flash',
-                systemInstruction: `Sən MEGA-MD WhatsApp botunun AI köməkçisisən. 
-Qısa, aydın və faydalı cavablar ver. 
-WhatsApp formatlamasından istifadə et: *qalın*, _italic_, \`kod\`.
-Azərbaycan dilində sual gəlirsə Azərbaycan dilində cavab ver.`
-            });
-
-            // Tarixçəni al və ya yeni başlat
             const history = chatHistory.get(senderId) || [];
 
-            const chat = model.startChat({
-                history,
-                generationConfig: {
-                    maxOutputTokens: 1024,
-                    temperature: 0.7,
+            // Sistem promptu + tarixçə + yeni sual
+            const contents = [
+                {
+                    role: 'user',
+                    parts: [{ text: `Sən MEGA-MD WhatsApp botunun AI köməkçisisən. Qısa, aydın cavablar ver. WhatsApp formatlamasından istifadə et: *qalın*, _italic_. Azərbaycan dilində sual gəlirsə Azərbaycan dilində cavab ver.` }]
+                },
+                {
+                    role: 'model',
+                    parts: [{ text: 'Anladım, hazıram!' }]
+                },
+                ...history,
+                {
+                    role: 'user',
+                    parts: [{ text: input }]
                 }
-            });
+            ];
 
-            const result = await chat.sendMessage(input);
-            const response = await result.response;
-            const text = response.text();
+            const response = await axios.post(
+                `${GEMINI_API_URL}?key=${apiKey}`,
+                {
+                    contents,
+                    generationConfig: {
+                        maxOutputTokens: 1024,
+                        temperature: 0.7
+                    }
+                },
+                {
+                    timeout: 30000,
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+
+            const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!text) throw new Error('Cavab alınmadı');
 
             // Tarixçəni yenilə
             history.push(
                 { role: 'user', parts: [{ text: input }] },
                 { role: 'model', parts: [{ text }] }
             );
-
-            // Son 10 mesajı saxla (yaddaş daşmasın)
             if (history.length > 20) history.splice(0, 2);
             chatHistory.set(senderId, history);
             resetTimer(senderId);
 
-            // Cavab göndər
             const msgCount = Math.floor(history.length / 2);
-            const footer = msgCount > 1 ? `\n\n_💬 Söhbət: ${msgCount} mesaj | Sıfırla: .gemini reset_` : '';
+            const footer = msgCount > 1
+                ? `\n\n_💬 Söhbət: ${msgCount} mesaj | Sıfırla: .gemini reset_`
+                : '';
 
             await sock.sendMessage(chatId, {
                 text: `🤖 *Gemini AI*\n\n${text}${footer}`,
@@ -129,18 +132,23 @@ Azərbaycan dilində sual gəlirsə Azərbaycan dilində cavab ver.`
             }, { quoted: message });
 
         } catch (err) {
-            console.error('[Gemini Plugin Error]', err);
+            console.error('[Gemini Plugin Error]', err?.response?.data || err.message);
 
-            let errMsg = '❌ Xəta baş verdi.';
+            const status = err?.response?.status;
+            const errData = err?.response?.data?.error?.message || '';
 
-            if (err.message?.includes('API_KEY_INVALID') || err.message?.includes('API key not valid')) {
-                errMsg = '❌ *API açarı yanlışdır!*\n\nRailway → Variables bölməsindəki `GEMINI_API_KEY` dəyərini yoxla.';
-            } else if (err.message?.includes('QUOTA_EXCEEDED') || err.message?.includes('quota')) {
+            let errMsg = `❌ Xəta baş verdi: ${err.message}`;
+
+            if (status === 400 || errData.includes('API key not valid')) {
+                errMsg = '❌ *API açarı yanlışdır!*\nRailway → Variables → `GEMINI_API_KEY` dəyərini yoxla.';
+            } else if (status === 429 || errData.includes('quota')) {
                 errMsg = '⚠️ *Gemini API limiti doldu.*\nBir az gözləyib yenidən cəhd et.';
-            } else if (err.message?.includes('SAFETY')) {
+            } else if (errData.includes('SAFETY')) {
                 errMsg = '🚫 Bu mesaj Gemini-nin təhlükəsizlik filtrindən keçmədi.';
-            } else if (err.message?.includes('fetch') || err.message?.includes('network')) {
-                errMsg = '🌐 Şəbəkə xətası. İnternet bağlantısını yoxla.';
+            } else if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') {
+                errMsg = '⏱️ Zaman aşımı. Yenidən cəhd et.';
+            } else if (err.code === 'ENOTFOUND' || err.code === 'EAI_AGAIN') {
+                errMsg = '🌐 DNS xətası. Railway şəbəkə bağlantısını yoxla.';
             }
 
             await sock.sendMessage(chatId, {
