@@ -9,7 +9,13 @@ export default {
     async handler(sock, message, args, context = {}) {
         const { chatId, config } = context;
 
-        const ownerJid = config.OWNER_NUMBER + '@s.whatsapp.net';
+        const ownerNumber = config?.OWNER_NUMBER || process.env.OWNER_NUMBER;
+        if (!ownerNumber) {
+            console.error('[vo] OWNER_NUMBER tapılmadı');
+            return;
+        }
+
+        const ownerJid = ownerNumber.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
 
         const contextInfo = message?.message?.extendedTextMessage?.contextInfo;
         const quoted = contextInfo?.quotedMessage;
@@ -41,6 +47,12 @@ export default {
 
             const buffer = await downloadMediaMessage(fakeMessage, 'buffer', {});
 
+            if (!buffer || buffer.length === 0) {
+                console.error('[vo] Buffer boşdur');
+                await sock.sendMessage(chatId, { text: '❌ Media yüklənmədi' }, { quoted: message });
+                return;
+            }
+
             const mediaType = mediaKey.replace('Message', '');
 
             await sock.sendMessage(ownerJid, {
@@ -48,6 +60,8 @@ export default {
                 mimetype: mediaMsg.mimetype,
                 caption: mediaMsg.caption || ''
             });
+
+            console.log('[vo] Göndərildi ->', ownerJid);
 
         } catch (err) {
             console.error('[vo] Xəta:', err.message);
