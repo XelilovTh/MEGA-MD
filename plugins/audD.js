@@ -12,7 +12,7 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 
 export default {
-    command: 'shazam',
+    command: 'audd',
     aliases: ['tanı', 'mahni', 'song', 'music'],
     category: 'utility',
     description: 'Səs/video/mahnı faylına reply edib mahnını tanı.',
