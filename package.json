@@ -45,6 +45,7 @@
   "license": "MIT",
   "author": "Qasim Ali",
   "dependencies": {
+"@google/genai": "^1.0.0",
     "@google/generative-ai": "^0.21.0",
     "@hapi/boom": "^10.0.1",
     "@whiskeysockets/baileys": "^7.0.0-rc13",
