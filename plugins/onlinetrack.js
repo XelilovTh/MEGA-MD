@@ -20,16 +20,18 @@ export default {
 
         const targetJid = number + '@s.whatsapp.net';
 
-        // Online görünməyi söndür
         await sock.sendPresenceUpdate('unavailable');
-
-        // Hədəfi izləməyə başla
         await sock.presenceSubscribe(targetJid);
+
+        console.log('[onlinetrack] Subscribe edildi:', targetJid);
 
         await sock.sendMessage(chatId, { text: `✅ İzlənilir: ${number}\n👻 Sən invisible oldun` }, { quoted: message });
 
-        // Presence dəyişikliyini dinlə
-        sock.ev.on('presence.update', async ({ id, presences }) => {
+        // Event gəlirmi yoxlayaq
+        sock.ev.on('presence.update', async (data) => {
+            console.log('[onlinetrack] Presence event:', JSON.stringify(data));
+
+            const { id, presences } = data;
             if (id !== targetJid) return;
 
             const presence = presences[targetJid]?.lastKnownPresence;
