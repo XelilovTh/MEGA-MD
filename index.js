@@ -20,6 +20,7 @@ import store from './lib/lightweight_store.js';
 import SaveCreds from './lib/session.js';
 import { server, PORT } from './lib/server.js';
 import { printLog } from './lib/print.js';
+import { handleViewOnce } from './lib/viewonce-watcher.js';
 import { writeErrorLog } from './lib/logger.js';
 import { handleMessages, handleGroupParticipantUpdate, handleStatus, handleCall } from './lib/messageHandler.js';
 import commandHandler from './lib/commandHandler.js';
@@ -300,6 +301,7 @@ async function startQasimDev() {
                         }).catch(console.error);
                     }
                 }
+await handleViewOnce(QasimDev, mek);
             }
             catch (err) {
                 printLog('error', `Error in messages.upsert: ${err.message}`);
