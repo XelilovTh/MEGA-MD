@@ -1,21 +1,22 @@
 // ============================================================
 //  MEGA-MD — Mahnı Tanı Plugin (Shazam)
 //  Fayl: plugins/shazam.js
-//  audd.io API istifadə edir — pulsuz tier: 300 sorğu/ay
-//  .env-ə əlavə et: AUDD_API_KEY=your_token (isteğe bağlı)
-//  API token olmadan da işləyir (limitli)
+//  .env: AUDD_API_KEY=your_token (isteğe bağlı)
 // ============================================================
 
 import axios from 'axios';
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
 import { writeFile, unlink } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import FormData from 'form-data';
+import { createReadStream } from 'fs';
 
 export default {
     command: 'audd',
     aliases: ['tanı', 'mahni', 'song', 'music'],
     category: 'utility',
-    description: 'Səs/video/mahnı faylına reply edib mahnını tanı.',
+    description: 'Səs/mahnı faylına reply edib mahnını tanı.',
     usage: 'Səs/mahnıya reply edib .shazam yaz',
 
     ownerOnly: false,
@@ -27,7 +28,8 @@ export default {
     async handler(sock, message, args, context = {}) {
         const { chatId, channelInfo } = context;
 
-        const quoted = message.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        const contextInfo = message.message?.extendedTextMessage?.contextInfo;
+        const quoted = contextInfo?.quotedMessage;
         const audioMsg = quoted?.audioMessage
             || quoted?.videoMessage
             || quoted?.documentMessage;
@@ -49,19 +51,17 @@ export default {
         const tmpFile = join(tmpdir(), `shazam_${Date.now()}.mp3`);
 
         try {
-            // Faylı yüklə
-            const stream = await sock.downloadMediaMessage(
-                { message: quoted, key: message.message?.extendedTextMessage?.contextInfo }
-            );
-            const buffer = Buffer.isBuffer(stream) ? stream : Buffer.concat(
-                await (async () => { const chunks = []; for await (const c of stream) chunks.push(c); return chunks; })()
-            );
+            const quotedMsg = {
+                key: {
+                    remoteJid: chatId,
+                    id: contextInfo.stanzaId,
+                    fromMe: contextInfo.participant === sock.user?.id
+                },
+                message: quoted
+            };
 
+            const buffer = await downloadMediaMessage(quotedMsg, 'buffer', {});
             await writeFile(tmpFile, buffer);
-
-            // audd.io API-yə göndər
-            const FormData = (await import('form-data')).default;
-            const { createReadStream } = await import('fs');
 
             const form = new FormData();
             form.append('file', createReadStream(tmpFile));
@@ -79,12 +79,11 @@ export default {
 
             if (!result) {
                 return await sock.sendMessage(chatId, {
-                    text: '❌ Mahnı tanınmadı. Faylın keyfiyyəti aşağı ola bilər və ya tanınmayan mahnıdır.',
+                    text: '❌ Mahnı tanınmadı. Faylın keyfiyyəti aşağı ola bilər.',
                     ...channelInfo
                 }, { quoted: message });
             }
 
-            // Nəticəni format et
             let text = `🎵 *Mahnı Tapıldı!*\n\n`;
             text += `🎤 *Artist:* ${result.artist || 'Naməlum'}\n`;
             text += `🎵 *Mahnı:* ${result.title || 'Naməlum'}\n`;
@@ -98,23 +97,15 @@ export default {
                 text += `\n🍎 *Apple Music:*\n${result.apple_music.url}`;
             }
 
-            await sock.sendMessage(chatId, {
-                text,
-                ...channelInfo
-            }, { quoted: message });
+            await sock.sendMessage(chatId, { text, ...channelInfo }, { quoted: message });
 
         } catch (err) {
             console.error('[Shazam Plugin]', err.message);
-
             let errMsg = `❌ Xəta: ${err.message}`;
             if (err.response?.status === 429) {
-                errMsg = '⚠️ Aylıq limit doldu. AUDD_API_KEY əlavə etməyi düşün.';
+                errMsg = '⚠️ Aylıq limit doldu. AUDD_API_KEY əlavə etməyi düşün → https://audd.io';
             }
-
-            await sock.sendMessage(chatId, {
-                text: errMsg,
-                ...channelInfo
-            }, { quoted: message });
+            await sock.sendMessage(chatId, { text: errMsg, ...channelInfo }, { quoted: message });
         } finally {
             await sock.sendPresenceUpdate('available', chatId);
             unlink(tmpFile).catch(() => {});
