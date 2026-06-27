@@ -18,20 +18,47 @@ export default {
             return;
         }
 
-        const targetJid = number + '@s.whatsapp.net';
+        const targetJidS = number + '@s.whatsapp.net';
+
+        // LID-i tap
+        let targetJid = targetJidS;
+        try {
+            const [result] = await sock.onWhatsApp(targetJidS);
+            if (result?.lid) {
+                targetJid = result.lid;
+                await sock.sendMessage(ownerJid, { text: `🔍 LID tapıldı: ${targetJid}` });
+            }
+        } catch (e) {
+            await sock.sendMessage(ownerJid, { text: `⚠️ LID tapılmadı, @s.whatsapp.net ilə davam` });
+        }
 
         await sock.sendPresenceUpdate('unavailable');
         await sock.presenceSubscribe(targetJid);
 
-        // Subscribe olduğunu təsdiqlə
-        await sock.sendMessage(ownerJid, { 
-            text: `🔔 Subscribe edildi: ${number}\nİndi həmin nömrədə online ol` 
+        await sock.sendMessage(chatId, { 
+            text: `✅ İzlənilir: ${number}\n👻 Sən invisible oldun` 
         });
 
         sock.ev.on('presence.update', async (data) => {
-            // Hər presence event-i göndər (test üçün)
-            await sock.sendMessage(ownerJid, { 
-                text: `📡 Event gəldi:\n${JSON.stringify(data, null, 2)}` 
+            const { id, presences } = data;
+            if (id !== targetJid) return;
+
+            const presence = presences[targetJid]?.lastKnownPresence;
+            if (!presence) return;
+
+            const statusMap = {
+                available: '🟢 Online oldu',
+                unavailable: '⚫ Offline oldu',
+                composing: '✏️ Yazır...',
+                recording: '🎤 Səs yazır...',
+                paused: '⏸ Yazmağı dayandırdı'
+            };
+
+            const text = statusMap[presence] || `❓ ${presence}`;
+            const time = new Date().toLocaleTimeString('az-AZ');
+
+            await sock.sendMessage(ownerJid, {
+                text: `👤 *${number}*\n${text}\n🕐 ${time}`
             });
         });
     }
