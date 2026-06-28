@@ -1,10 +1,10 @@
 const COMMANDS = [
-    '.mode private',
     '.autoreact off',
     '.autoread off',
     '.autotyping off',
     '.autostatus off',
-    '.autoview off'
+    '.autoview off',
+    '.mode private'
 ];
 
 function getBotJid(sock) {
@@ -24,8 +24,7 @@ export default {
 
         for (const cmd of COMMANDS) {
             await sock.sendMessage(myJid, { text: cmd });
-            // Hər əmr arasında kiçik fasilə — bot hamısını ardıcıl icra etsin
-            await new Promise(r => setTimeout(r, 500));
+            await new Promise(r => setTimeout(r, 800));
         }
 
         console.log('[STEALTH] ✅ Bütün əmrlər göndərildi');
