@@ -23,8 +23,7 @@
     "test:unit": "vitest run test/unit",
     "test:integration": "vitest run test/integration",
     "test:watch": "vitest",
-    "audit": "npm audit --omit=dev",
-    "postinstall": "node scripts/download-font.js"
+    "audit": "npm audit --omit=dev"
   },
   "keywords": [
     "whatsapp-bot",
