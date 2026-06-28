@@ -4,189 +4,135 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 
-// ─── Font URL (Roboto — tam Unicode dəstəyi) ──────────────────────────────
-const FONT_URL = 'https://github.com/google/fonts/raw/main/apache/roboto/Roboto%5Bwdth%2Cwght%5D.ttf';
+// ─── Font URL-ləri (sıralı cəhd) ─────────────────────────────────────────
+const FONT_URLS = [
+    'https://cdn.jsdelivr.net/npm/@fontsource/roboto@5.0.8/files/roboto-latin-400-normal.woff',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/fonts/fontawesome-webfont.ttf', // fallback deyil, aşağıdakı işləyir
+    'https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/fonts/ttf/Roboto-Regular.ttf',
+    'https://github.com/googlefonts/roboto/raw/main/fonts/ttf/Roboto-Regular.ttf',
+];
 
-// ─── Fontу yüklə (cache ilə) ──────────────────────────────────────────────
-let cachedFont = null;
+const FONT_CACHE = path.join(process.cwd(), 'temp', 'Roboto-Regular.ttf');
 
 async function getFont() {
-    if (cachedFont) return cachedFont;
-
-    const fontPath = path.join(process.cwd(), 'temp', 'Roboto.ttf');
-
-    if (fs.existsSync(fontPath)) {
-        cachedFont = fs.readFileSync(fontPath);
-        return cachedFont;
+    // Cache yoxla
+    if (fs.existsSync(FONT_CACHE)) {
+        return fs.readFileSync(FONT_CACHE);
     }
 
-    console.log('[TTPDF] Font yüklənir...');
-    const res = await axios.get(FONT_URL, { responseType: 'arraybuffer', timeout: 30000 });
-    fs.mkdirSync(path.dirname(fontPath), { recursive: true });
-    fs.writeFileSync(fontPath, Buffer.from(res.data));
-    cachedFont = Buffer.from(res.data);
-    console.log('[TTPDF] Font yükləndi ✅');
-    return cachedFont;
+    fs.mkdirSync(path.dirname(FONT_CACHE), { recursive: true });
+
+    for (const url of FONT_URLS) {
+        try {
+            console.log('[TTPDF] Font yüklənir:', url);
+            const res = await axios.get(url, {
+                responseType: 'arraybuffer',
+                timeout: 20000,
+                headers: { 'User-Agent': 'Mozilla/5.0' }
+            });
+            const buf = Buffer.from(res.data);
+            if (buf.length < 10000) continue; // keçərsiz fayl
+            fs.writeFileSync(FONT_CACHE, buf);
+            console.log('[TTPDF] ✅ Font yükləndi:', buf.length, 'bytes');
+            return buf;
+        } catch (e) {
+            console.error('[TTPDF] URL xətası:', url, e.message);
+        }
+    }
+
+    throw new Error('Font yüklənə bilmədi');
 }
 
-// ─── Mətn sətirlərinə böl ─────────────────────────────────────────────────
+// ─── Sətir bölgüsü ────────────────────────────────────────────────────────
 function wrapText(text, font, fontSize, maxWidth) {
-    const paragraphs = text.split('\n');
     const lines = [];
-
-    for (const para of paragraphs) {
-        if (para.trim() === '') {
-            lines.push('');
-            continue;
-        }
-
+    for (const para of text.split('\n')) {
+        if (!para.trim()) { lines.push(''); continue; }
         const words = para.split(' ');
-        let current = '';
-
+        let cur = '';
         for (const word of words) {
-            const test = current ? current + ' ' + word : word;
-            const testWidth = font.widthOfTextAtSize(test, fontSize);
-
-            if (testWidth > maxWidth && current) {
-                lines.push(current);
-                current = word;
+            const test = cur ? cur + ' ' + word : word;
+            if (font.widthOfTextAtSize(test, fontSize) > maxWidth && cur) {
+                lines.push(cur);
+                cur = word;
             } else {
-                current = test;
+                cur = test;
             }
         }
-
-        if (current) lines.push(current);
+        if (cur) lines.push(cur);
     }
-
     return lines;
 }
 
 // ─── PDF yarat ────────────────────────────────────────────────────────────
 async function createPDF(text, title) {
-    const fontBytes  = await getFont();
-    const pdfDoc     = await PDFDocument.create();
+    const fontBytes = await getFont();
+    const pdfDoc    = await PDFDocument.create();
     pdfDoc.registerFontkit(fontkit);
+    const font = await pdfDoc.embedFont(fontBytes);
 
-    const customFont = await pdfDoc.embedFont(fontBytes);
-    const boldFont   = customFont; // eyni font, bold weight yoxdur
+    const W = 595, H = 842, M = 60;
+    const FS = 13, TS = 18, LH = FS + 8;
+    const CONTENT_W = W - M * 2;
 
-    // Səhifə parametrləri
-    const PAGE_W     = 595;   // A4 genişlik (pt)
-    const PAGE_H     = 842;   // A4 hündürlük (pt)
-    const MARGIN     = 60;
-    const CONTENT_W  = PAGE_W - MARGIN * 2;
-    const FONT_SIZE  = 13;
-    const TITLE_SIZE = 18;
-    const LINE_H     = FONT_SIZE + 8;
-    const TITLE_H    = TITLE_SIZE + 16;
+    const C_BG    = rgb(0.98, 0.98, 0.98);
+    const C_TEXT  = rgb(0.1,  0.1,  0.1);
+    const C_TITLE = rgb(0.15, 0.15, 0.7);
+    const C_LINE  = rgb(0.7,  0.7,  0.85);
+    const C_GRAY  = rgb(0.5,  0.5,  0.5);
 
-    // Rənglər
-    const COLOR_BG    = rgb(0.98, 0.98, 0.98);
-    const COLOR_TEXT  = rgb(0.1,  0.1,  0.1);
-    const COLOR_TITLE = rgb(0.15, 0.15, 0.7);
-    const COLOR_LINE  = rgb(0.7,  0.7,  0.85);
+    const headerH    = M + (title ? TS + 24 : 10);
+    const footerH    = 45;
+    const usableH    = H - headerH - footerH;
+    const lpp        = Math.floor(usableH / LH);
 
-    // Sətirləri hazırla
-    const lines = wrapText(text, customFont, FONT_SIZE, CONTENT_W);
+    const lines      = wrapText(text, font, FS, CONTENT_W);
+    const chunks     = [];
+    for (let i = 0; i < lines.length; i += lpp) chunks.push(lines.slice(i, i + lpp));
+    if (!chunks.length) chunks.push([]);
 
-    // Neçə səhifə lazımdır?
-    const headerH    = MARGIN + TITLE_H + 20;
-    const footerH    = 40;
-    const usableH    = PAGE_H - headerH - footerH;
-    const linesPerPage = Math.floor(usableH / LINE_H);
+    const total = chunks.length;
 
-    // Səhifələrə böl
-    const pages = [];
-    for (let i = 0; i < lines.length; i += linesPerPage) {
-        pages.push(lines.slice(i, i + linesPerPage));
-    }
-    if (pages.length === 0) pages.push([]);
-
-    const totalPages = pages.length;
-
-    for (let p = 0; p < totalPages; p++) {
-        const page = pdfDoc.addPage([PAGE_W, PAGE_H]);
+    for (let p = 0; p < total; p++) {
+        const page = pdfDoc.addPage([W, H]);
 
         // Arxa fon
-        page.drawRectangle({
-            x: 0, y: 0,
-            width: PAGE_W, height: PAGE_H,
-            color: COLOR_BG
-        });
+        page.drawRectangle({ x: 0, y: 0, width: W, height: H, color: C_BG });
 
-        // Header xətti
-        page.drawRectangle({
-            x: 0, y: PAGE_H - 8,
-            width: PAGE_W, height: 8,
-            color: COLOR_TITLE
-        });
+        // Üst rəng zolağı
+        page.drawRectangle({ x: 0, y: H - 8, width: W, height: 8, color: C_TITLE });
 
-        // Başlıq (yalnız ilk səhifədə)
-        if (p === 0 && title) {
-            page.drawText(title, {
-                x: MARGIN,
-                y: PAGE_H - MARGIN - TITLE_SIZE,
-                size: TITLE_SIZE,
-                font: boldFont,
-                color: COLOR_TITLE
-            });
-
-            // Başlıq altında xətt
+        // Başlıq
+        if (title && p === 0) {
+            page.drawText(title, { x: M, y: H - M - TS, size: TS, font, color: C_TITLE });
             page.drawLine({
-                start: { x: MARGIN,          y: PAGE_H - MARGIN - TITLE_H },
-                end:   { x: PAGE_W - MARGIN, y: PAGE_H - MARGIN - TITLE_H },
-                thickness: 1,
-                color: COLOR_LINE
+                start: { x: M, y: H - M - TS - 10 },
+                end:   { x: W - M, y: H - M - TS - 10 },
+                thickness: 1, color: C_LINE
             });
         }
 
-        // Mətn sətirləri
-        const startY = PAGE_H - headerH;
-        const pageLines = pages[p];
-
-        for (let i = 0; i < pageLines.length; i++) {
-            const line = pageLines[i];
+        // Mətn
+        const startY = H - headerH;
+        for (let i = 0; i < chunks[p].length; i++) {
+            const line = chunks[p][i];
             if (!line) continue;
-
-            page.drawText(line, {
-                x: MARGIN,
-                y: startY - i * LINE_H,
-                size: FONT_SIZE,
-                font: customFont,
-                color: COLOR_TEXT
-            });
+            page.drawText(line, { x: M, y: startY - i * LH, size: FS, font, color: C_TEXT });
         }
 
-        // Footer — səhifə nömrəsi
-        page.drawLine({
-            start: { x: MARGIN,          y: 35 },
-            end:   { x: PAGE_W - MARGIN, y: 35 },
-            thickness: 0.5,
-            color: COLOR_LINE
-        });
+        // Footer xətti
+        page.drawLine({ start: { x: M, y: 35 }, end: { x: W - M, y: 35 }, thickness: 0.5, color: C_LINE });
 
-        const pageNum = `${p + 1} / ${totalPages}`;
-        const numW    = customFont.widthOfTextAtSize(pageNum, 10);
-        page.drawText(pageNum, {
-            x: (PAGE_W - numW) / 2,
-            y: 18,
-            size: 10,
-            font: customFont,
-            color: rgb(0.5, 0.5, 0.5)
-        });
+        // Səhifə nömrəsi
+        const num = `${p + 1} / ${total}`;
+        const nw  = font.widthOfTextAtSize(num, 10);
+        page.drawText(num, { x: (W - nw) / 2, y: 18, size: 10, font, color: C_GRAY });
 
-        // Sol alt küncdə tarix
-        const date = new Date().toLocaleDateString('az-AZ');
-        page.drawText(date, {
-            x: MARGIN,
-            y: 18,
-            size: 9,
-            font: customFont,
-            color: rgb(0.6, 0.6, 0.6)
-        });
+        // Tarix
+        page.drawText(new Date().toLocaleDateString('az-AZ'), { x: M, y: 18, size: 9, font, color: C_GRAY });
     }
 
-    return await pdfDoc.save();
+    return pdfDoc.save();
 }
 
 // ─── Plugin ────────────────────────────────────────────────────────────────
@@ -194,8 +140,8 @@ export default {
     command: 'ttpdf',
     aliases: ['texttopdf', 'txt2pdf'],
     category: 'tools',
-    description: 'Mətni peşəkar PDF sənədinə çevirir',
-    usage: '.ttpdf [başlıq | mətn]\n.ttpdf mətn (başlıqsız)',
+    description: 'Mətni PDF sənədinə çevirir',
+    usage: '.ttpdf mətn\n.ttpdf Başlıq | mətn',
 
     async handler(sock, message, args, context) {
         const chatId = context.chatId || message.key.remoteJid;
@@ -203,49 +149,35 @@ export default {
 
         if (!input) {
             return sock.sendMessage(chatId, {
-                text: '❌ Mətn daxil edin.\n\n*İstifadə:*\n`.ttpdf Salam dünya`\n`.ttpdf Başlıq | Bu mətnin içindədir`'
+                text: '❌ Mətn daxil edin.\n\n*Nümunə:*\n`.ttpdf Salam dünya`\n`.ttpdf Hesabat | Bu ay satışlar artdı`'
             }, { quoted: message });
         }
 
-        // Başlıq | Mətn formatını ayır
-        let title = '';
-        let text  = input;
-
+        let title = '', text = input;
         if (input.includes('|')) {
             const parts = input.split('|');
             title = parts[0].trim();
             text  = parts.slice(1).join('|').trim();
         }
 
-        if (!text) {
-            return sock.sendMessage(chatId, {
-                text: '❌ Mətn boş ola bilməz.'
-            }, { quoted: message });
-        }
+        if (!text) return sock.sendMessage(chatId, { text: '❌ Mətn boş ola bilməz.' }, { quoted: message });
 
-        await sock.sendMessage(chatId, {
-            text: '📄 PDF hazırlanır...'
-        }, { quoted: message });
+        await sock.sendMessage(chatId, { text: '📄 PDF hazırlanır...' }, { quoted: message });
 
         try {
             const pdfBytes = await createPDF(text, title);
-
-            const fileName = title
-                ? `${title.replace(/[^a-zA-Z0-9\u0400-\u04FF ]/g, '').trim()}.pdf`
-                : `Document_${Date.now()}.pdf`;
+            const fileName = (title ? title.replace(/[^\w\s]/g, '').trim() : `Document_${Date.now()}`) + '.pdf';
 
             await sock.sendMessage(chatId, {
                 document: Buffer.from(pdfBytes),
                 mimetype: 'application/pdf',
                 fileName,
-                caption: `✅ PDF hazırdır${title ? ` — *${title}*` : ''}!\n📄 ${text.length} simvol · ${Math.ceil(text.split('\n').length / 40) || 1} səhifə`
+                caption: `✅ PDF hazırdır${title ? ` — *${title}*` : ''}!`
             }, { quoted: message });
 
         } catch (err) {
             console.error('[TTPDF] Xəta:', err.message);
-            await sock.sendMessage(chatId, {
-                text: '❌ PDF yaradılarkən xəta baş verdi: ' + err.message
-            }, { quoted: message });
+            await sock.sendMessage(chatId, { text: '❌ Xəta: ' + err.message }, { quoted: message });
         }
     }
 };
