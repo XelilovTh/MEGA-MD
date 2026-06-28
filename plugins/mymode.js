@@ -1,17 +1,4 @@
-const COMMANDS = [
-    '.autoreact off',
-    '.autoread off',
-    '.autotyping off',
-    '.autostatus off',
-    '.autoview off',
-    '.mode private'
-];
-
-function getBotJid(sock) {
-    const raw = sock.user?.id || '';
-    const num = raw.split(':')[0].split('@')[0];
-    return `${num}@s.whatsapp.net`;
-}
+import { channelInfo } from '../lib/messageConfig.js';
 
 export default {
     command: 't',
@@ -20,13 +7,27 @@ export default {
     ownerOnly: true,
 
     async handler(sock, message, args, context) {
-        const myJid = getBotJid(sock);
+        const chatId = context.chatId || message.key.remoteJid;
+        const ctx = { ...context, chatId, channelInfo };
 
-        for (const cmd of COMMANDS) {
-            await sock.sendMessage(myJid, { text: cmd });
-            await new Promise(r => setTimeout(r, 800));
+        const steps = [
+            { file: './areact.js',    args: ['off'] },
+            { file: './autoread.js',  args: ['off'] },
+            { file: './autotyping.js',args: ['off'] },
+            { file: './autostatus.js',args: ['off'] },
+            { file: './autoview.js',  args: ['off'] },
+            { file: './mode.js',      args: ['private'] },
+        ];
+
+        for (const step of steps) {
+            try {
+                const plugin = (await import(step.file)).default;
+                await plugin.handler(sock, message, step.args, ctx);
+            } catch (err) {
+                console.error(`[STEALTH] ${step.file} xətası:`, err.message);
+            }
         }
 
-        console.log('[STEALTH] ✅ Bütün əmrlər göndərildi');
+        console.log('[STEALTH] ✅ Bütün əmrlər icra edildi');
     }
 };
