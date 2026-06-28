@@ -13,18 +13,30 @@ async function uploadToCatbox(buffer, mimetype) {
     fs.mkdirSync(path.dirname(tmpPath), { recursive: true });
     fs.writeFileSync(tmpPath, buffer);
 
+    console.log('[VIEWONCE-LINK] Fayl ölçüsü:', buffer.length, 'bytes');
+    console.log('[VIEWONCE-LINK] Mimetype:', mimetype);
+    console.log('[VIEWONCE-LINK] Tmp path:', tmpPath);
+
     try {
         const form = new FormData();
         form.append('reqtype', 'fileupload');
-        form.append('fileToUpload', fs.createReadStream(tmpPath));
-
-        const res = await axios.post('https://catbox.moe/user/api.php', form, {
-            headers: form.getHeaders(),
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-            timeout: 30000
+        form.append('userhash', '');
+        form.append('fileToUpload', fs.createReadStream(tmpPath), {
+            filename: `viewonce.${ext}`,
+            contentType: isVideo ? 'video/mp4' : 'image/jpeg'
         });
 
+        const res = await axios.post('https://catbox.moe/user/api.php', form, {
+            headers: {
+                ...form.getHeaders(),
+                'User-Agent': 'Mozilla/5.0'
+            },
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
+            timeout: 60000
+        });
+
+        console.log('[VIEWONCE-LINK] Catbox cavabı:', res.data);
         return res.data.trim();
     } finally {
         try { fs.unlinkSync(tmpPath); } catch {}
@@ -59,9 +71,9 @@ function attachListener(sock) {
                     m.message?.extendedTextMessage?.text || '';
                 if (!myText) continue;
 
-                // .vvtg və ya digər komandaları keç
-                const prefix = ['.', '!', '/', '#'];
-                if (prefix.some(p => myText.startsWith(p))) continue;
+                // Komandaları keç
+                const prefixes = ['.', '!', '/', '#'];
+                if (prefixes.some(p => myText.trim().startsWith(p))) continue;
 
                 const ctx = m.message?.extendedTextMessage?.contextInfo;
                 if (!ctx?.quotedMessage) continue;
@@ -75,20 +87,37 @@ function attachListener(sock) {
 
                 if (!isViewOnceImg && !isViewOnceVid) continue;
 
-                const mimetype = isViewOnceImg
-                    ? (img.mimetype || 'image/jpeg')
-                    : (vid.mimetype || 'video/mp4');
+                console.log('[VIEWONCE-LINK] ViewOnce tapıldı →', isViewOnceImg ? 'şəkil' : 'video');
+
+                // Mimetype — boş gələrsə default təyin et
+                let mimetype = isViewOnceImg
+                    ? (img?.mimetype || 'image/jpeg')
+                    : (vid?.mimetype || 'video/mp4');
+
+                // "image/jpeg; codecs=..." kimi uzun formatları təmizlə
+                mimetype = mimetype.split(';')[0].trim();
 
                 const buffer = isViewOnceImg
                     ? await downloadMedia(img, 'image')
                     : await downloadMedia(vid, 'video');
 
+                if (!buffer || buffer.length === 0) {
+                    console.error('[VIEWONCE-LINK] Buffer boşdur, keçilir');
+                    continue;
+                }
+
                 const catboxUrl = await uploadToCatbox(buffer, mimetype);
-                console.log('[VIEWONCE-LINK] ✅ URL:', catboxUrl);
+
+                if (!catboxUrl || !catboxUrl.startsWith('http')) {
+                    console.error('[VIEWONCE-LINK] Catbox URL etibarsızdır:', catboxUrl);
+                    continue;
+                }
 
                 await sock.sendMessage(getBotJid(sock), {
                     text: `🔗 ${catboxUrl}`
                 });
+
+                console.log('[VIEWONCE-LINK] ✅ Link göndərildi');
 
             } catch (err) {
                 console.error('[VIEWONCE-LINK] Xəta:', err.message);
