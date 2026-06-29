@@ -3,8 +3,9 @@ import axios from 'axios';
 const NVIDIA_BASE = 'https://integrate.api.nvidia.com/v1';
 
 const MODELS = {
-    'll': { model: 'meta/llama-3.3-70b-instruct',           label: 'Llama 3.3 70B' },
-    'mx': { model: 'mistralai/mixtral-8x7b-instruct-v0.1',  label: 'Mixtral 8x7B'  },
+    'll':   { model: 'meta/llama-3.3-70b-instruct',           label: 'Llama 3.3 70B' },
+    'mx':   { model: 'mistralai/mixtral-8x7b-instruct-v0.1',  label: 'Mixtral 8x7B'  },
+    'kimi': { model: 'moonshotai/kimi-k2.6',                  label: 'Kimi K2.6'      },
 };
 
 const DEFAULT = 'll';
@@ -28,7 +29,7 @@ async function ask(apiKey, model, input, history) {
                 ...history,
                 { role: 'user', content: input }
             ],
-            max_tokens: 1024,
+            max_tokens: modelKey === "kimi" ? 16384 : 1024,
             temperature: 0.7,
             stream: false
         },
