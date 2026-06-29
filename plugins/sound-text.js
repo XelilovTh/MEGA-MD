@@ -36,7 +36,7 @@ export default {
             
             // Make API request to Gemini 1.5 Flash (or gemini-2.5-flash if available)
             const response = await ai.models.generateContent({
-                model: 'gemini-1.5-flash',
+                model: 'gemini-2.0-flash',
                 contents: [
                     {
                         role: 'user',
