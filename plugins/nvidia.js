@@ -3,11 +3,11 @@ import axios from 'axios';
 const NVIDIA_BASE = 'https://integrate.api.nvidia.com/v1';
 
 const MODELS = {
-    'll': { model: 'meta/llama-3.3-70b-instruct',          label: 'Llama 3.3 70B' },
-    'ds': { model: 'deepseek-ai/deepseek-r1',              label: 'DeepSeek R1'   },
-    'ms': { model: 'mistralai/mistral-7b-instruct-v0.3',   label: 'Mistral 7B'    },
-    'mx': { model: 'mistralai/mixtral-8x7b-instruct-v0.1', label: 'Mixtral 8x7B'  },
-    'gm': { model: 'google/gemma-3-27b-it',                label: 'Gemma 3 27B'   },
+    'll': { model: 'meta/llama-3.3-70b-instruct',                    label: 'Llama 3.3 70B'  },
+    'ds': { model: 'deepseek-ai/deepseek-r1-distill-llama-70b',      label: 'DeepSeek R1 70B' },
+    'ms': { model: 'mistralai/mixtral-8x22b-instruct-v0.1',          label: 'Mistral 8x22B'  },
+    'mx': { model: 'mistralai/mixtral-8x7b-instruct-v0.1',           label: 'Mixtral 8x7B'   },
+    'gm': { model: 'google/gemma-3-12b-it',                          label: 'Gemma 3 12B'    },
 };
 
 const DEFAULT = 'll';
@@ -58,12 +58,10 @@ export default {
         if (!apiKey) return sock.sendMessage(chatId,
             { text: '❌ `NVIDIA_API_KEY` tapılmadı.' }, { quoted: message });
 
-        // Birinci arqument model açarı mı?
         const first  = (args[0] || '').toLowerCase();
         let modelKey = MODELS[first] ? first : DEFAULT;
         let input    = MODELS[first] ? args.slice(1).join(' ').trim() : args.join(' ').trim();
 
-        // Heç bir arqument yoxdur — siyahı göstər
         if (!input && !MODELS[first]) {
             const list = Object.entries(MODELS)
                 .map(([k, v]) => `• *.nv ${k}* — ${v.label}`)
@@ -73,7 +71,6 @@ export default {
             }, { quoted: message });
         }
 
-        // Reset
         if (input === 'reset' || first === 'reset') {
             H.delete(senderId);
             return sock.sendMessage(chatId,
@@ -102,10 +99,12 @@ export default {
             }, { quoted: message });
 
         } catch (err) {
+            console.error('[NV]', err.response?.data || err.message);
             let msg = '❌ Xəta: ' + err.message;
             if (err.response?.status === 401) msg = '❌ API açarı yanlışdır.';
             if (err.response?.status === 429) msg = '⚠️ Limit doldu, bir az gözlə.';
             if (err.response?.status === 404) msg = '❌ Model tapılmadı.';
+            if (err.response?.status === 410) msg = '❌ Bu model artıq mövcud deyil.';
             await sock.sendMessage(chatId, { text: msg }, { quoted: message });
         } finally {
             await sock.sendPresenceUpdate('available', chatId);
