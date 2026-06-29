@@ -92,9 +92,28 @@ export default {
             const n      = Math.floor(getH(senderId).length / 2);
             const footer = n > 1 ? `\n\n_💬 ${n} mesaj | .nv reset_` : '';
 
-            await sock.sendMessage(chatId, {
-                text: `🤖 *${label}*\n\n${reply}${footer}`
-            }, { quoted: message });
+            // Kod bloku varsa fayl kimi göndər
+            const codeMatch = reply.match(/```(\w+)?
+([\s\S]*?)```/);
+            if (codeMatch) {
+                const ext     = codeMatch[1] || 'txt';
+                const code    = codeMatch[2].trim();
+                const fname   = `output_${Date.now()}.${ext}`;
+                const caption = `🤖 *${label}*
+
+${reply.replace(codeMatch[0], `_[${ext} faylı göndərildi]_`).trim()}${footer}`;
+
+                await sock.sendMessage(chatId, {
+                    document: Buffer.from(code, 'utf-8'),
+                    mimetype: 'application/octet-stream',
+                    fileName: fname,
+                    caption: caption.slice(0, 1024)
+                }, { quoted: message });
+            } else {
+                await sock.sendMessage(chatId, {
+                    text: `🤖 *${label}*\n\n${reply}${footer}`
+                }, { quoted: message });
+            }
 
         } catch (err) {
             console.error('[NV]', err.response?.data || err.message);
