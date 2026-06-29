@@ -3,34 +3,33 @@ import axios from 'axios';
 const NVIDIA_BASE = 'https://integrate.api.nvidia.com/v1';
 
 const MODELS = {
-    'llama':     'meta/llama-3.3-70b-instruct',
-    'mistral':   'mistralai/mistral-7b-instruct-v0.3',
-    'mixtral':   'mistralai/mixtral-8x7b-instruct-v0.1',
-    'deepseek':  'deepseek-ai/deepseek-r1',
-    'gemma':     'google/gemma-3-27b-it',
+    'll': { model: 'meta/llama-3.3-70b-instruct',          label: 'Llama 3.3 70B' },
+    'ds': { model: 'deepseek-ai/deepseek-r1',              label: 'DeepSeek R1'   },
+    'ms': { model: 'mistralai/mistral-7b-instruct-v0.3',   label: 'Mistral 7B'    },
+    'mx': { model: 'mistralai/mixtral-8x7b-instruct-v0.1', label: 'Mixtral 8x7B'  },
+    'gm': { model: 'google/gemma-3-27b-it',                label: 'Gemma 3 27B'   },
 };
 
-const DEFAULT_MODEL = 'meta/llama-3.3-70b-instruct';
-const chatHistory   = new Map();
+const DEFAULT = 'll';
+const H = new Map();
 
-function getHistory(userId) { return chatHistory.get(userId) || []; }
-
-function saveHistory(userId, userMsg, assistantMsg) {
-    const h = getHistory(userId);
-    h.push({ role: 'user', content: userMsg }, { role: 'assistant', content: assistantMsg });
+const getH  = id => H.get(id) || [];
+const saveH = (id, u, a) => {
+    const h = getH(id);
+    h.push({ role: 'user', content: u }, { role: 'assistant', content: a });
     if (h.length > 20) h.splice(0, 2);
-    chatHistory.set(userId, h);
-}
+    H.set(id, h);
+};
 
-async function askNvidia(apiKey, model, userMsg, history) {
+async function ask(apiKey, model, input, history) {
     const res = await axios.post(
         `${NVIDIA_BASE}/chat/completions`,
         {
             model,
             messages: [
-                { role: 'system', content: 'Sən faydalı AI köməkçisisən. Azərbaycan dilində sual gəlirsə Azərbaycan dilində cavab ver. Qısa və aydın ol.' },
+                { role: 'system', content: 'Sən faydalı AI köməkçisisən. Azərbaycan dilində sual gəlirsə Azərbaycanca cavab ver. Qısa və aydın ol.' },
                 ...history,
-                { role: 'user', content: userMsg }
+                { role: 'user', content: input }
             ],
             max_tokens: 1024,
             temperature: 0.7,
@@ -44,81 +43,72 @@ async function askNvidia(apiKey, model, userMsg, history) {
     return res.data?.choices?.[0]?.message?.content?.trim();
 }
 
-function makePlugin(command, aliases, modelKey, label) {
-    const model = MODELS[modelKey] || DEFAULT_MODEL;
+export default {
+    command: 'nv',
+    aliases: ['nvidia'],
+    category: 'ai',
+    description: 'Nvidia NIM AI modelləri',
+    usage: '.nv ll <sual> | .nv ds <sual> | .nv reset',
 
-    return {
-        command,
-        aliases,
-        category: 'ai',
-        description: `${label} ilə söhbət et`,
-        usage: `.${command} <sualın> | .${command} reset`,
+    async handler(sock, message, args, context) {
+        const chatId   = context.chatId || message.key.remoteJid;
+        const senderId = context.senderId || message.key.participant || message.key.remoteJid;
+        const apiKey   = process.env.NVIDIA_API_KEY;
 
-        async handler(sock, message, args, context) {
-            const chatId   = context.chatId || message.key.remoteJid;
-            const senderId = context.senderId || message.key.participant || message.key.remoteJid;
-            const input    = args.join(' ').trim();
+        if (!apiKey) return sock.sendMessage(chatId,
+            { text: '❌ `NVIDIA_API_KEY` tapılmadı.' }, { quoted: message });
 
-            const apiKey = process.env.NVIDIA_API_KEY;
-            if (!apiKey) {
-                return sock.sendMessage(chatId,
-                    { text: '❌ `NVIDIA_API_KEY` tapılmadı.' },
-                    { quoted: message }
-                );
-            }
+        // Birinci arqument model açarı mı?
+        const first  = (args[0] || '').toLowerCase();
+        let modelKey = MODELS[first] ? first : DEFAULT;
+        let input    = MODELS[first] ? args.slice(1).join(' ').trim() : args.join(' ').trim();
 
-            if (!input) {
-                return sock.sendMessage(chatId,
-                    { text: `🤖 *${label}*\n\n*İstifadə:* \`.${command} sualın\`\n*Sıfırla:* \`.${command} reset\`` },
-                    { quoted: message }
-                );
-            }
-
-            if (input === 'reset') {
-                chatHistory.delete(senderId);
-                return sock.sendMessage(chatId,
-                    { text: '🔄 Söhbət sıfırlandı.' },
-                    { quoted: message }
-                );
-            }
-
-            await sock.sendPresenceUpdate('composing', chatId);
-
-            try {
-                const history = getHistory(senderId);
-                const reply   = await askNvidia(apiKey, model, input, history);
-
-                if (!reply) throw new Error('Boş cavab gəldi');
-
-                saveHistory(senderId, input, reply);
-
-                const msgCount = Math.floor(getHistory(senderId).length / 2);
-                const footer   = msgCount > 1 ? `\n\n_💬 ${msgCount} mesaj | .${command} reset_` : '';
-
-                await sock.sendMessage(chatId,
-                    { text: `🤖 *${label}*\n\n${reply}${footer}` },
-                    { quoted: message }
-                );
-
-            } catch (err) {
-                console.error(`[${command.toUpperCase()}]`, err.message);
-                let msg = '❌ Xəta: ' + err.message;
-                if (err.response?.status === 401) msg = '❌ API açarı yanlışdır.';
-                if (err.response?.status === 429) msg = '⚠️ Limit doldu, bir az gözlə.';
-                if (err.response?.status === 404) msg = '❌ Model tapılmadı.';
-                await sock.sendMessage(chatId, { text: msg }, { quoted: message });
-            } finally {
-                await sock.sendPresenceUpdate('available', chatId);
-            }
+        // Heç bir arqument yoxdur — siyahı göstər
+        if (!input && !MODELS[first]) {
+            const list = Object.entries(MODELS)
+                .map(([k, v]) => `• *.nv ${k}* — ${v.label}`)
+                .join('\n');
+            return sock.sendMessage(chatId, {
+                text: `🤖 *Nvidia NIM*\n\n${list}\n\n*Nümunə:* \`.nv ll Salam\`\n*Sıfırla:* \`.nv reset\``
+            }, { quoted: message });
         }
-    };
-}
 
-// ─── Hər model ayrıca komanda ─────────────────────────────────────────────
-export const llama    = makePlugin('llama',    ['nv', 'nvidia'],          'llama',    'Llama 3.3 70B');
-export const deepseek = makePlugin('deepseek', ['ds', 'think'],           'deepseek', 'DeepSeek R1');
-export const mistral  = makePlugin('mistral',  ['ms'],                    'mistral',  'Mistral 7B');
-export const mixtral  = makePlugin('mixtral',  ['mx'],                    'mixtral',  'Mixtral 8x7B');
-export const gemma    = makePlugin('gemma',    ['gm'],                    'gemma',    'Gemma 3 27B');
+        // Reset
+        if (input === 'reset' || first === 'reset') {
+            H.delete(senderId);
+            return sock.sendMessage(chatId,
+                { text: '🔄 Söhbət sıfırlandı.' }, { quoted: message });
+        }
 
-export default llama;
+        if (!input) return sock.sendMessage(chatId,
+            { text: `❌ Mətn daxil et.\n*Nümunə:* \`.nv ${modelKey} sualın\`` }, { quoted: message });
+
+        const { model, label } = MODELS[modelKey];
+
+        await sock.sendPresenceUpdate('composing', chatId);
+
+        try {
+            const history = getH(senderId);
+            const reply   = await ask(apiKey, model, input, history);
+            if (!reply) throw new Error('Boş cavab gəldi');
+
+            saveH(senderId, input, reply);
+
+            const n      = Math.floor(getH(senderId).length / 2);
+            const footer = n > 1 ? `\n\n_💬 ${n} mesaj | .nv reset_` : '';
+
+            await sock.sendMessage(chatId, {
+                text: `🤖 *${label}*\n\n${reply}${footer}`
+            }, { quoted: message });
+
+        } catch (err) {
+            let msg = '❌ Xəta: ' + err.message;
+            if (err.response?.status === 401) msg = '❌ API açarı yanlışdır.';
+            if (err.response?.status === 429) msg = '⚠️ Limit doldu, bir az gözlə.';
+            if (err.response?.status === 404) msg = '❌ Model tapılmadı.';
+            await sock.sendMessage(chatId, { text: msg }, { quoted: message });
+        } finally {
+            await sock.sendPresenceUpdate('available', chatId);
+        }
+    }
+};
