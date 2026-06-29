@@ -90,13 +90,16 @@ export default {
             const reply   = await ask(apiKey, model, maxTokens, input, history);
             if (!reply) throw new Error('Boş cavab gəldi');
 
-            saveH(senderId, input, reply);
+            // Reasoning modelləri ucun <think> blokunu cixar
+            const cleanReply = reply.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+            saveH(senderId, input, cleanReply);
 
             const n      = Math.floor(getH(senderId).length / 2);
             const footer = n > 1 ? `\n\n_💬 ${n} mesaj | .nv reset_` : '';
 
             // Kod bloku yoxla
-            const codeMatch = reply.match(/```(\w+)?\n([\s\S]*?)```/);
+            const codeMatch = cleanReply.match(/```(\w+)?\n([\s\S]*?)```/);
 
             if (codeMatch) {
                 const ext    = (codeMatch[1] || 'txt').toLowerCase();
@@ -107,7 +110,7 @@ export default {
                 fs.mkdirSync(path.dirname(tmpPath), { recursive: true });
                 fs.writeFileSync(tmpPath, code, 'utf-8');
 
-                const textPart = reply.replace(codeMatch[0], '').trim();
+                const textPart = cleanReply.replace(codeMatch[0], '').trim();
                 const caption  = `🤖 *${label}*${textPart ? '\n\n' + textPart : ''}${footer}`.slice(0, 1024);
 
                 await sock.sendMessage(chatId, {
@@ -120,7 +123,7 @@ export default {
                 try { fs.unlinkSync(tmpPath); } catch {}
             } else {
                 await sock.sendMessage(chatId, {
-                    text: `🤖 *${label}*\n\n${reply}${footer}`
+                    text: `🤖 *${label}*\n\n${cleanReply}${footer}`
                 }, { quoted: message });
             }
 
