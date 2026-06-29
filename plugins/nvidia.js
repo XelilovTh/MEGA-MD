@@ -3,11 +3,8 @@ import axios from 'axios';
 const NVIDIA_BASE = 'https://integrate.api.nvidia.com/v1';
 
 const MODELS = {
-    'll': { model: 'meta/llama-3.3-70b-instruct',                    label: 'Llama 3.3 70B'  },
-    'ds': { model: 'deepseek-ai/deepseek-r1-distill-llama-70b',      label: 'DeepSeek R1 70B' },
-    'ms': { model: 'mistralai/mixtral-8x22b-instruct-v0.1',          label: 'Mistral 8x22B'  },
-    'mx': { model: 'mistralai/mixtral-8x7b-instruct-v0.1',           label: 'Mixtral 8x7B'   },
-    'gm': { model: 'google/gemma-3-12b-it',                          label: 'Gemma 3 12B'    },
+    'll': { model: 'meta/llama-3.3-70b-instruct',           label: 'Llama 3.3 70B' },
+    'mx': { model: 'mistralai/mixtral-8x7b-instruct-v0.1',  label: 'Mixtral 8x7B'  },
 };
 
 const DEFAULT = 'll';
@@ -48,7 +45,7 @@ export default {
     aliases: ['nvidia'],
     category: 'ai',
     description: 'Nvidia NIM AI modelləri',
-    usage: '.nv ll <sual> | .nv ds <sual> | .nv reset',
+    usage: '.nv ll <sual> | .nv mx <sual> | .nv reset',
 
     async handler(sock, message, args, context) {
         const chatId   = context.chatId || message.key.remoteJid;
