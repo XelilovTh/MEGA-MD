@@ -8,6 +8,7 @@ const MYSQL_URL = process.env.MYSQL_URL;
 const SQLITE_URL = process.env.DB_URL;
 const HAS_DB = !!(MONGO_URL || POSTGRES_URL || MYSQL_URL || SQLITE_URL);
 const configPath = dataFile('autoread.json');
+
 async function initConfig() {
     if (HAS_DB) {
         const config = await store.getSetting('global', 'autoread');
@@ -24,6 +25,7 @@ async function initConfig() {
         return JSON.parse(fs.readFileSync(configPath, "utf-8"));
     }
 }
+
 async function saveConfig(config) {
     if (HAS_DB) {
         await store.saveSetting('global', 'autoread', config);
@@ -32,6 +34,7 @@ async function saveConfig(config) {
         fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
     }
 }
+
 async function isAutoreadEnabled() {
     try {
         const config = await initConfig();
@@ -42,6 +45,7 @@ async function isAutoreadEnabled() {
         return false;
     }
 }
+
 function isBotMentionedInMessage(message, botNumber) {
     if (!message.message)
         return false;
@@ -74,6 +78,7 @@ function isBotMentionedInMessage(message, botNumber) {
     }
     return false;
 }
+
 export async function handleAutoread(sock, message) {
     try {
         const ghostMode = await store.getSetting('global', 'stealthMode');
@@ -83,6 +88,7 @@ export async function handleAutoread(sock, message) {
         }
     }
     catch (err) {
+        // ignore store errors and proceed
     }
     const enabled = await isAutoreadEnabled();
     if (enabled) {
@@ -98,22 +104,32 @@ export async function handleAutoread(sock, message) {
                     id: message.key.id,
                     participant: message.key.participant
                 };
-                await sock.readMessages([key]);
+                // Delay readMessages by 5000ms (5 seconds) so the client can play notification sound
+                setTimeout(async () => {
+                    try {
+                        await sock.readMessages([key]);
+                        console.log('✅ Marked message as read (delayed 5s)');
+                    }
+                    catch (err) {
+                        console.error('Error marking message as read (delayed):', err);
+                    }
+                }, 5000);
                 return true;
             }
             catch (error) {
-                console.error('Error marking message as read:', error);
+                console.error('Error scheduling read message:', error);
                 return false;
             }
         }
     }
     return false;
 }
+
 export default {
     command: 'autoread',
     aliases: ['read', 'autoreadmsg'],
     category: 'owner',
-    description: 'Toggle automatic message reading (blue ticks)',
+    description: 'Toggle automatic message reading (blue ticks) with 5s delayed read',
     usage: '.autoread <on|off>',
     ownerOnly: true,
     async handler(sock, message, args, context) {
@@ -128,13 +144,13 @@ export default {
                 await sock.sendMessage(chatId, {
                     text: `*📖 AUTOREAD STATUS*\n\n` +
                         `*Current Status:* ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n` +
-                        `*Stealth Mode:* ${ghostActive ? '👻 Active (overrides autoread)' : '❌ Inactive'}\n` +
-                        `*Storage:* ${HAS_DB ? 'Database' : 'File System'}\n\n` +
+                        `*Ghost Mode:* ${ghostActive ? '👻 Active (overrides autoread)' : '❌ Inactive'}\n` +
+                        `*Behavior:* Delayed read (5 seconds) when enabled\n\n` +
                         `*Commands:*\n` +
-                        `• \`.autoread on\` - Enable auto-read\n` +
+                        `• \`.autoread on\` - Enable auto-read (delayed 5s)\n` +
                         `• \`.autoread off\` - Disable auto-read\n\n` +
                         `*What it does:*\n` +
-                        `When enabled, the bot automatically marks all messages as read (blue ticks).\n\n` +
+                        `When enabled, the bot schedules a read receipt 5 seconds after a message arrives, allowing the recipient device to play a notification sound before the message is marked read.\n\n` +
                         `*Note:* Ghost mode takes priority over autoread. If ghost mode is active, no read receipts will be sent.`,
                     ...channelInfo
                 }, { quoted: message });
@@ -153,7 +169,7 @@ export default {
                 const ghostMode = await store.getSetting('global', 'stealthMode');
                 const ghostActive = ghostMode && ghostMode.enabled;
                 await sock.sendMessage(chatId, {
-                    text: `✅ *Auto-read enabled!*\n\nAll messages will now be automatically marked as read.${ghostActive ? '\n\n⚠️ *Note:* Ghost mode is currently active and will override autoread.' : ''}`,
+                    text: `✅ *Auto-read enabled (delayed 5s)!*\n\nAll messages will now be scheduled to be marked as read after 5 seconds.${ghostActive ? '\n\n⚠️ *Note:* Ghost mode is currently active and will override autoread.' : ''}`,
                     ...channelInfo
                 }, { quoted: message });
             }
