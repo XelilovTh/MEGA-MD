@@ -6,12 +6,12 @@ const MONGO_URL = process.env.MONGO_URL;
 const POSTGRES_URL = process.env.POSTGRES_URL;
 const MYSQL_URL = process.env.MYSQL_URL;
 const SQLITE_URL = process.env.DB_URL;
-const HAS_DB = !!(MONGO_URL  POSTGRES_URL  MYSQL_URL  SQLITE_URL);
+const HAS_DB = !!(MONGO_URL || POSTGRES_URL || MYSQL_URL || SQLITE_URL);
 const configPath = dataFile('autoread.json');
 async function initConfig() {
     if (HAS_DB) {
         const config = await store.getSetting('global', 'autoread');
-        return config  { enabled: false };
+        return config || { enabled: false };
     }
     else {
         if (!fs.existsSync(configPath)) {
@@ -57,13 +57,13 @@ function isBotMentionedInMessage(message, botNumber) {
             }
         }
     }
-    const textContent = message.message.conversation 
-        message.message.extendedTextMessage?.text 
-        message.message.imageMessage?.caption 
-        message.message.videoMessage?.caption  '';
+    const textContent = message.message.conversation ||
+        message.message.extendedTextMessage?.text ||
+        message.message.imageMessage?.caption ||
+        message.message.videoMessage?.caption || '';
     if (textContent) {
         const botUsername = botNumber.split('@')[0];
-        if (textContent.includes(@${botUsername})) {
+        if (textContent.includes(`@${botUsername}`)) {
             return true;
         }
         const botNames = [global.botname?.toLowerCase(), 'bot', 'mega', 'mega bot'];
@@ -86,7 +86,7 @@ export async function handleAutoread(sock, message) {
     }
     const enabled = await isAutoreadEnabled();
     if (enabled) {
-        const botNumber = ${sock.user.id.split(':')[0] }@s.whatsapp.net;
+        const botNumber = `${sock.user.id.split(':')[0] }@s.whatsapp.net`;
         const isBotMentioned = isBotMentionedInMessage(message, botNumber);
         if (isBotMentioned) {
             return false;
@@ -117,9 +117,8 @@ export default {
     usage: '.autoread <on|off>',
     ownerOnly: true,
     async handler(sock, message, args, context) {
-
-const chatId = context.chatId  message.key.remoteJid;
-        const channelInfo = context.channelInfo  {};
+        const chatId = context.chatId || message.key.remoteJid;
+        const channelInfo = context.channelInfo || {};
         try {
             const config = await initConfig();
             const action = args[0]?.toLowerCase();
@@ -127,21 +126,21 @@ const chatId = context.chatId  message.key.remoteJid;
                 const ghostMode = await store.getSetting('global', 'stealthMode');
                 const ghostActive = ghostMode && ghostMode.enabled;
                 await sock.sendMessage(chatId, {
-                    text: *📖 AUTOREAD STATUS*\n\n +
-                        *Current Status:* ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n +
-                        *Stealth Mode:* ${ghostActive ? '👻 Active (overrides autoread)' : '❌ Inactive'}\n +
-                        *Storage:* ${HAS_DB ? 'Database' : 'File System'}\n\n +
-                        *Commands:*\n +
-                        • \.autoread on\` - Enable auto-read\n` +
-                        • \.autoread off\` - Disable auto-read\n\n` +
-                        *What it does:*\n +
-                        When enabled, the bot automatically marks all messages as read (blue ticks).\n\n +
-                        *Note:* Ghost mode takes priority over autoread. If ghost mode is active, no read receipts will be sent.,
+                    text: `*📖 AUTOREAD STATUS*\n\n` +
+                        `*Current Status:* ${config.enabled ? '✅ Enabled' : '❌ Disabled'}\n` +
+                        `*Stealth Mode:* ${ghostActive ? '👻 Active (overrides autoread)' : '❌ Inactive'}\n` +
+                        `*Storage:* ${HAS_DB ? 'Database' : 'File System'}\n\n` +
+                        `*Commands:*\n` +
+                        `• \`.autoread on\` - Enable auto-read\n` +
+                        `• \`.autoread off\` - Disable auto-read\n\n` +
+                        `*What it does:*\n` +
+                        `When enabled, the bot automatically marks all messages as read (blue ticks).\n\n` +
+                        `*Note:* Ghost mode takes priority over autoread. If ghost mode is active, no read receipts will be sent.`,
                     ...channelInfo
                 }, { quoted: message });
                 return;
             }
-            if (action === 'on'  action === 'enable') {
+            if (action === 'on' || action === 'enable') {
                 if (config.enabled) {
                     await sock.sendMessage(chatId, {
                         text: '⚠️ *Autoread is already enabled*',
@@ -158,7 +157,7 @@ const chatId = context.chatId  message.key.remoteJid;
                     ...channelInfo
                 }, { quoted: message });
             }
-            else if (action === 'off'  action === 'disable') {
+            else if (action === 'off' || action === 'disable') {
                 if (!config.enabled) {
                     await sock.sendMessage(chatId, {
                         text: '⚠️ *Autoread is already disabled*',
@@ -175,7 +174,7 @@ const chatId = context.chatId  message.key.remoteJid;
             }
             else {
                 await sock.sendMessage(chatId, {
-                    text: '❌ *Invalid option!*\n\nUse: .autoread on/off',
+                    text: '❌ *Invalid option!*\n\nUse: `.autoread on/off`',
                     ...channelInfo
                 }, { quoted: message });
             }
