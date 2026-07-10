@@ -11,7 +11,6 @@ export default {
         const ctx = { ...context, chatId, channelInfo };
 
         const steps = [
-            { file: './areact.js',    args: ['off'] },
 
             { file: './autoview.js',  args: ['off'] },
             { file: './antidelete.js',args: ['on'] },
