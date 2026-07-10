@@ -49,9 +49,7 @@ const DATA_DEFAULTS = {
     'autoAi.json': {},
     'messageCount.json': { isPublic: true, messageCount: {} },
     'userGroupData.json': { users: [], groups: [], antilink: {}, antibadword: {}, warnings: {}, sudo: [], welcome: {}, goodbye: {}, chatbot: {}, autoReaction: false },
-    'autoStatus.json': { enabled: false },
-    'autoread.json': { enabled: false },
-    'autotyping.json': { enabled: false },
+
     'pmblocker.json': { enabled: false },
     'anticall.json': { enabled: false },
     'stealthMode.json': { enabled: false },
@@ -202,7 +200,7 @@ async function startQasimDev() {
                 creds: state.creds,
                 keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
             },
-            markOnlineOnConnect: !isGhostActive,
+            markOnlineOnConnect: false,
             generateHighQualityLinkPreview: true,
             syncFullHistory: false,
             getMessage: async (key) => {

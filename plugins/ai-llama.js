@@ -24,13 +24,13 @@ export default {
     aliases: ['ai', 'chat', 'ask'],
     category: 'ai',
     description: 'Ask a question to AI',
-    usage: '.llama <question>',
+    usage: '.llama <question> (edits?|changes?)',
     async handler(sock, message, args, context) {
         const { chatId, config } = context;
         const prefix = config.prefix;
         const query = args.join(' ').trim();
         if (!query) {
-            return sock.sendMessage(chatId, { text: `🤖 *AI Assistant*\n\nUsage: \`${prefix}llama <your question>\`\nExample: \`${prefix}llama explain quantum physics\`` }, { quoted: message });
+            return sock.sendMessage(chatId, { text: `🤖 *AI Assistant*\n\nUsage: \`${prefix}llama <your question> (edits?|changes?)\`\nExample: \`${prefix}llama explain quantum physics edits?\`` }, { quoted: message });
         }
         try {
             await sock.sendMessage(chatId, { react: { text: '🤖', key: message.key } });
@@ -43,3 +43,5 @@ export default {
         }
     }
 };
+
+

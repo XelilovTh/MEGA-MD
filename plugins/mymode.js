@@ -12,9 +12,7 @@ export default {
 
         const steps = [
             { file: './areact.js',    args: ['off'] },
-            { file: './autoread.js',  args: ['off'] },
-            { file: './autotyping.js',args: ['off'] },
-            { file: './autostatus.js',args: ['off'] },
+
             { file: './autoview.js',  args: ['off'] },
             { file: './antidelete.js',args: ['on'] },
             { file: './vvlink.js',    args: [] },

@@ -20,9 +20,7 @@ export default {
             }
             const isGroup = chatId.endsWith('@g.us');
             const botMode = await store.getBotMode();
-            const autoStatus = await store.getSetting('global', 'autoStatus') || { enabled: false };
-            const autoread = await store.getSetting('global', 'autoread') || { enabled: false };
-            const autotyping = await store.getSetting('global', 'autotyping') || { enabled: false };
+
             const pmblocker = await store.getSetting('global', 'pmblocker') || { enabled: false };
             const anticall = await store.getSetting('global', 'anticall') || { enabled: false };
             const autoReactionData = await store.getSetting('global', 'autoReaction');
@@ -45,9 +43,7 @@ export default {
             menuText += `┃ 👤 *User:* @${cleanJid(senderId)}\n`;
             menuText += `┃ 🤖 *Mode:* ${botMode.toUpperCase()}\n`;
             menuText += `┃\n┣━〔 *GLOBAL CONFIG* 〕━┈\n`;
-            menuText += `┃ ${getSt(autoStatus?.enabled)} *Auto Status*\n`;
-            menuText += `┃ ${getSt(autoread?.enabled)} *Auto Read*\n`;
-            menuText += `┃ ${getSt(autotyping?.enabled)} *Auto Typing*\n`;
+
             menuText += `┃ ${getSt(pmblocker?.enabled)} *PM Blocker*\n`;
             menuText += `┃ ${getSt(anticall?.enabled)} *Anti Call*\n`;
             menuText += `┃ ${getSt(autoReaction)} *Auto Reaction*\n`;

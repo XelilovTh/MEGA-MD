@@ -2,9 +2,7 @@ import fs from 'fs';
 import path from 'path';
 const DATA_DIR = path.join(process.cwd(), 'data');
 const defaults = {
-    'autoStatus.json': { enabled: false },
-    'autoread.json': { enabled: false },
-    'autotyping.json': { enabled: false },
+
     'pmblocker.json': { enabled: false },
     'anticall.json': { enabled: false },
     'stealthMode.json': { enabled: false },
