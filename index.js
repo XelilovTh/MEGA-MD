@@ -52,7 +52,7 @@ const DATA_DEFAULTS = {
 
     'pmblocker.json': { enabled: false },
     'anticall.json': { enabled: false },
-    'stealthMode.json': { enabled: false },
+    'stealthMode.json': { enabled: true },
     'autoBio.json': { enabled: false, customBio: null },
     'autoReaction.json': { enabled: false },
     'antidelete.json': { enabled: false },
