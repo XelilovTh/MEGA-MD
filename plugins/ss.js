@@ -27,7 +27,7 @@ export default {
                 timeout: 10000,
             });
             const caption = `🌐 Screenshot of:\n${url}`;
-            await sock.sendMessage(chatId, { image: { buffer: data }, caption }, { quoted: message });
+            await sock.sendMessage(chatId, { image: Buffer.from(data), caption }, { quoted: message });
         }
         catch (error) {
             console.error('Screenshot plugin error:', error);

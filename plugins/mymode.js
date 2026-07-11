@@ -11,11 +11,10 @@ export default {
         const ctx = { ...context, chatId, channelInfo };
 
         const steps = [
-
-            { file: './autoview.js',  args: ['off'] },
-            { file: './antidelete.js',args: ['on'] },
-            { file: './vvlink.js',    args: [] },
-            { file: './mode.js',      args: ['private'] },
+            { file: './viewoncelink.js',  args: [] },
+            { file: './viewoncetg.js',   args: [] },
+            { file: './antidelete.js', args: ['on'] },
+            { file: './mode.js',       args: ['private'] },
         ];
 
         for (const step of steps) {

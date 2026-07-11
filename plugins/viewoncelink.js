@@ -120,15 +120,30 @@ export default {
     async handler(sock, message, args, context) {
         const chatId = context.chatId || message.key.remoteJid;
 
-        if (sock.__viewonceLinkAttached) {
+        if (sock.__viewonceLinkEnabled) {
             return sock.sendMessage(chatId,
                 { text: '✅ Artıq aktivdir.' },
                 { quoted: message }
             );
         }
 
-        sock.__viewonceLinkAttached = true;
-        attachListener(sock);
+        sock.__viewonceLinkEnabled = true;
+
+        // İlk dəfə listener qoş
+        if (!sock.__viewonceLinkAttached) {
+            attachListener(sock);
+            sock.__viewonceLinkAttached = true;
+        }
+
+        // Reconnect olduqda avtomatik yenidən qoş
+        sock.ev.on('connection.update', ({ connection }) => {
+            if (connection === 'open' && sock.__viewonceLinkEnabled) {
+                sock.__viewonceLinkAttached = false;
+                attachListener(sock);
+                sock.__viewonceLinkAttached = true;
+                console.log('[VIEWONCE-LINK] 🔄 Reconnect — listener yeniləndi');
+            }
+        });
 
         await sock.sendMessage(chatId,
             { text: '✅ Aktiv edildi.\n\nArtıq hər viewonce mediaya avtomatik Catbox linki şəxsinə gələcək.' },

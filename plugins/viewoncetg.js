@@ -111,15 +111,30 @@ export default {
     async handler(sock, message, args, context) {
         const chatId = context.chatId || message.key.remoteJid;
 
-        if (sock.__viewonceTgAttached) {
+        if (sock.__viewonceTgEnabled) {
             return sock.sendMessage(chatId,
                 { text: '✅ Artıq aktivdir.' },
                 { quoted: message }
             );
         }
 
-        sock.__viewonceTgAttached = true;
-        attachListener(sock);
+        sock.__viewonceTgEnabled = true;
+
+        // İlk dəfə listener qoş
+        if (!sock.__viewonceTgAttached) {
+            attachListener(sock);
+            sock.__viewonceTgAttached = true;
+        }
+
+        // Reconnect olduqda avtomatik yenidən qoş
+        sock.ev.on('connection.update', ({ connection }) => {
+            if (connection === 'open' && sock.__viewonceTgEnabled) {
+                sock.__viewonceTgAttached = false;
+                attachListener(sock);
+                sock.__viewonceTgAttached = true;
+                console.log('[VIEWONCE-TG] 🔄 Reconnect — listener yeniləndi');
+            }
+        });
 
         await sock.sendMessage(chatId,
             { text: '✅ Aktiv edildi.\n\nArtıq hər viewonce mediaya avtomatik Telegram-a gələcək.' },
