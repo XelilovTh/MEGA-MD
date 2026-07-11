@@ -220,8 +220,11 @@ async function startQasimDev() {
         QasimDev.sendPresenceUpdate = async function (...args) {
             const ghostMode = await store.getSetting('global', 'stealthMode');
             if (ghostMode && ghostMode.enabled) {
-                printLog('info', '👻 Blocked presence update (stealth mode)');
-                return;
+                // Söndürülmüş (offline) statusuna icazə veririk ki, WhatsApp aktiv olduğumuzu zənn etməsin
+                if (args[0] !== 'unavailable') {
+                    printLog('info', '👻 Blocked presence update (stealth mode)');
+                    return;
+                }
             }
             return originalSendPresenceUpdate.apply(this, args);
         };
@@ -258,6 +261,10 @@ async function startQasimDev() {
         store.bind(QasimDev.ev);
         QasimDev.ev.on('messages.upsert', async (chatUpdate) => {
             try {
+                const ghostMode = await store.getSetting('global', 'stealthMode');
+                if (ghostMode && ghostMode.enabled) {
+                    try { await QasimDev.sendPresenceUpdate('unavailable', chatUpdate.messages[0].key.remoteJid); } catch(e){}
+                }
                 const mek = chatUpdate.messages[0];
                 if (!mek.message)
                     return;
@@ -434,6 +441,7 @@ async function startQasimDev() {
                 const ghostMode = await store.getSetting('global', 'stealthMode');
                 if (ghostMode && ghostMode.enabled) {
                     printLog('info', '👻 STEALTH MODE ACTIVE');
+                    try { await QasimDev.sendPresenceUpdate('unavailable'); } catch (e) {}
                 }
                 printLog('success', `Connected to => ${ JSON.stringify(QasimDev.user, null, 2)}`);
                 try {
