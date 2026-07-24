@@ -7,19 +7,19 @@ export async function handleTicTacToeMove(sock, chatId, senderId, text) {
             room.state === 'PLAYING');
         if (!room)
             return;
-        const isSurrender = /^(surrender|give up)$/i.test(text);
+        const isSurrender = /^(təslim|təslim ol|hec hece)$/i.test(text);
         if (!isSurrender && !/^[1-9]$/.test(text))
             return;
         if (senderId !== room.game.currentTurn && !isSurrender) {
             await sock.sendMessage(chatId, {
-                text: '❌ Not your turn!'
+                text: '❌ Sıra səndə deyil!'
             });
             return;
         }
         const ok = isSurrender ? true : room.game.turn(senderId === room.game.playerO, parseInt(text, 10) - 1);
         if (!ok) {
             await sock.sendMessage(chatId, {
-                text: '❌ Invalid move! That position is already taken.'
+                text: '❌ Keçərli gediş deyil! Həmin xana artıq tutulub.'
             });
             return;
         }
@@ -41,7 +41,7 @@ export async function handleTicTacToeMove(sock, chatId, senderId, text) {
         if (isSurrender) {
             winner = senderId === room.game.playerX ? room.game.playerO : room.game.playerX;
             await sock.sendMessage(chatId, {
-                text: `🏳️ @${senderId.split('@')[0]} has surrendered! @${winner.split('@')[0]} wins the game!`,
+                text: `🏳️ @${senderId.split('@')[0]} təslim oldu! @${winner.split('@')[0]} oyunu qazandı!`,
                 mentions: [senderId, winner]
             });
             delete games[room.id];
@@ -49,16 +49,16 @@ export async function handleTicTacToeMove(sock, chatId, senderId, text) {
         }
         let gameStatus;
         if (winner) {
-            gameStatus = `🎉 @${winner.split('@')[0]} wins the game!`;
+            gameStatus = `🎉 @${winner.split('@')[0]} oyunu qazandı! 🏆`;
         }
         else if (isTie) {
-            gameStatus = `🤝 Game ended in a draw!`;
+            gameStatus = `🤝 Oyun heç-heçə ilə bitdi!`;
         }
         else {
-            gameStatus = `🎲 Turn: @${room.game.currentTurn.split('@')[0]} (${senderId === room.game.playerX ? '❎' : '⭕'})`;
+            gameStatus = `🎲 Sıra: @${room.game.currentTurn.split('@')[0]} (${senderId === room.game.playerX ? '❎' : '⭕'})`;
         }
         const str = `
-🎮 *TicTacToe Game*
+🎮 *XO Oyunu*
 
 ${gameStatus}
 
@@ -66,10 +66,10 @@ ${arr.slice(0, 3).join('')}
 ${arr.slice(3, 6).join('')}
 ${arr.slice(6).join('')}
 
-▢ Player ❎: @${room.game.playerX.split('@')[0]}
-▢ Player ⭕: @${room.game.playerO.split('@')[0]}
+▢ ❎ Oyunçu: @${room.game.playerX.split('@')[0]}
+▢ ⭕ Oyunçu: @${room.game.playerO.split('@')[0]}
 
-${!winner && !isTie ? '• Type a number (1-9) to make your move\n• Type *surrender* to give up' : ''}
+${!winner && !isTie ? '📌 *Gediş etmək üçün:* 1-9 arası nömrə yaz\n📌 *Təslim olmaq üçün:* `təslim` yaz' : ''}
 `;
         const mentions = [
             room.game.playerX,
@@ -91,15 +91,15 @@ ${!winner && !isTie ? '• Type a number (1-9) to make your move\n• Type *surr
         }
     }
     catch (error) {
-        console.error('Error in tictactoe move:', error);
+        console.error('TicTacToe xətası:', error);
     }
 }
 export default {
     command: 'tictactoe',
     aliases: ['ttt', 'xo'],
     category: 'games',
-    description: 'Play TicTacToe game with another user',
-    usage: '.tictactoe [room name]',
+    description: 'Başqa bir istifadəçi ilə TicTacToe oynayın',
+    usage: '.xo [otaq adı]',
     groupOnly: true,
     async handler(sock, message, args, context) {
         const chatId = context.chatId || message.key.remoteJid;
@@ -109,7 +109,7 @@ export default {
             if (Object.values(games).find((room) => room.id.startsWith('tictactoe') &&
                 [room.game.playerX, room.game.playerO].includes(senderId))) {
                 await sock.sendMessage(chatId, {
-                    text: '*You are already in a game*\n\nType *surrender* to quit the current game first.'
+                    text: '*Sən artıq oyundasan*\n\nÖncəki oyunu təslim olmaq üçün *təslim* yaz.'
                 }, { quoted: message });
                 return;
             }
@@ -133,19 +133,19 @@ export default {
                     '9': '9️⃣',
                 }[v] || v));
                 const str = `
-🎮 *TicTacToe Game Started!*
+🎮 *XO Oyunu Başladı!*
 
-Waiting for @${room.game.currentTurn.split('@')[0]} to play...
+@${room.game.currentTurn.split('@')[0]} oynamaq üçün gözlənilir...
 
 ${arr.slice(0, 3).join('')}
 ${arr.slice(3, 6).join('')}
 ${arr.slice(6).join('')}
 
-▢ *Room ID:* ${room.id}
-▢ *Rules:*
-• Make 3 rows of symbols vertically, horizontally or diagonally to win
-• Type a number (1-9) to place your symbol
-• Type *surrender* to give up
+▢ *Otaq:* ${room.id}
+▢ *Qaydalar:*
+• Üfüqi, şaquli və ya diaqonal 3 simvol düzəlt
+• Gediş etmək üçün 1-9 arası nömrə yaz
+• Təslim olmaq üçün *təslim* yaz
 `;
                 await sock.sendMessage(chatId, {
                     text: str,
@@ -163,16 +163,22 @@ ${arr.slice(6).join('')}
                 if (text)
                     room.name = text;
                 await sock.sendMessage(chatId, {
-                    text: `*Waiting for opponent*\n\nType \`.tictactoe ${text || ''}\` to join this game!\n\nPlayer ❎: @${senderId.split('@')[0]}`,
+                    text: `🎯 *Rəqib gözlənilir...*
+
+Oyuna qoşulmaq üçün \`.xo ${text || ''}\` yaz!
+
+❎ Oyunçu: @${senderId.split('@')[0]}
+
+💡 *Məsləhət:* Otaq adı yazarsan, yalnız həmin otağa qoşula bilər`,
                     mentions: [senderId]
                 }, { quoted: message });
                 games[room.id] = room;
             }
         }
         catch (error) {
-            console.error('Error in tictactoe command:', error);
+            console.error('TicTacToe əmr xətası:', error);
             await sock.sendMessage(chatId, {
-                text: '❌ *Error starting game*\n\nPlease try again later.'
+                text: '❌ *Oyun başladıla bilmədi*\n\nZəhmət olmasa bir az sonra yenidən cəhd et.'
             }, { quoted: message });
         }
     },
