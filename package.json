@@ -45,7 +45,7 @@
   "license": "MIT",
   "author": "Qasim Ali",
   "dependencies": {
-"@google-cloud/text-to-speech": "^5.4.0",
+    "@google-cloud/text-to-speech": "^5.4.0",
     "@google/genai": "^1.52.0",
     "@google/generative-ai": "^0.21.0",
     "@hapi/boom": "^10.0.1",
@@ -81,6 +81,7 @@
     "simple-git": "^3.30.0",
     "stickers-formatter": "^0.0.2",
     "syntax-error": "^1.4.0",
+    "tiktok-scrapper": "^0.1.0",
     "yt-search": "^2.12.1"
   },
   "devDependencies": {
