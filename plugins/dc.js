@@ -17,6 +17,20 @@ Yalnız bir cümlə yaz — nə izahat, nə başlıq, nə markdown.
 // In‑memory duplicate cache (per chat, last 50)
 const recentCache = new Map();
 
+function getGeminiApiKey(config) {
+    const candidates = [
+        process.env.DC_GEMINI_API_KEY,
+        process.env.DC_GEMINI_API,
+        process.env.GEMINI_API_KEY,
+        config?.DC_GEMINI_API,
+        config?.GEMINI_API_KEY,
+    ];
+
+    return candidates
+        .map((value) => typeof value === 'string' ? value.trim() : '')
+        .find((value) => value && !/^Bearer\s|^ya29\.|^eyJ/i.test(value));
+}
+
 export default {
     command: 'dc',
     aliases: ['dogruluq', 'cesaret', 'truth', 'dare'],
@@ -29,7 +43,7 @@ export default {
         const jid = chatId || message.key.remoteJid;
 
         // Use same env var as gemini.js, fallback to DC_GEMINI_API
-        const apiKey = process.env.DC_GEMINI_API || process.env.DC_GEMINI_API_KEY || process.env.GEMINI_API_KEY || config?.DC_GEMINI_API || config?.GEMINI_API_KEY;
+        const apiKey = getGeminiApiKey(config);
         if (!apiKey) {
             return await sock.sendMessage(jid, {
                 text: '❌ *Gemini API açarı tapılmadı!*\n\n`.env` faylına əlavə et:\n`DC_GEMINI_API` = API_AÇARINIZ\n\n🔗 https://aistudio.google.com/apikey',
@@ -101,8 +115,10 @@ export default {
             console.error('[DC Plugin]', err?.message);
 
             let errMsg = `❌ Xəta: ${err.message}`;
-            if (err.message?.includes('API key not valid') || err.message?.includes('INVALID_ARGUMENT')) {
-                errMsg = '❌ *API açarı yanlışdır!*\n`.env` → `DC_GEMINI_API` dəyərini yoxla.';
+            if (err.message?.includes('UNAUTHENTICATED') || err.message?.includes('ACCESS_TOKEN_TYPE_UNSUPPORTED')) {
+                errMsg = '❌ *Gemini credential yanlışdır!*\nRailway Variables-də `DC_GEMINI_API_KEY` və ya `GEMINI_API_KEY` üçün Google AI Studio-dan alınmış `AIza...` API key istifadə et. OAuth tokeni və `Bearer ...` dəyəri istifadə etmə.';
+            } else if (err.message?.includes('API key not valid') || err.message?.includes('INVALID_ARGUMENT')) {
+                errMsg = '❌ *API açarı yanlışdır!*\nRailway Variables-də `DC_GEMINI_API_KEY` dəyərini yoxla.';
             } else if (err.message?.includes('quota') || err.message?.includes('RESOURCE_EXHAUSTED')) {
                 errMsg = '⚠️ *Gemini API limiti doldu.* Bir az gözləyib yenidən cəhd et.';
             } else if (err.message?.includes('SAFETY')) {
