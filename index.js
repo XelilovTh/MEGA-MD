@@ -10,6 +10,7 @@ import QRCode from 'qrcode';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const authDir = path.join(process.cwd(), process.env.AUTH_DIR || 'session');
 import { smsg } from './lib/myfunc.js';
 import { compileAll } from './lib/compile.js';
 import makeWASocket, { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers, jidDecode, jidNormalizedUser, makeCacheableSignalKeyStore, delay } from '@whiskeysockets/baileys';
@@ -17,7 +18,6 @@ import NodeCache from 'node-cache';
 import pino from 'pino';
 import config from './config.js';
 import store from './lib/lightweight_store.js';
-import SaveCreds from './lib/session.js';
 import { server, PORT } from './lib/server.js';
 import { printLog } from './lib/print.js';
 import { writeErrorLog } from './lib/logger.js';
@@ -103,7 +103,7 @@ process.on('SIGINT', () => {
     process.exit(0);
 });
 function ensureSessionDirectory() {
-    const sessionPath = path.join(__dirname, 'session');
+    const sessionPath = authDir;
     if (!existsSync(sessionPath)) {
         mkdirSync(sessionPath, { recursive: true });
     }
@@ -111,7 +111,7 @@ function ensureSessionDirectory() {
 }
 function hasValidSession() {
     try {
-        const credsPath = path.join(__dirname, 'session', 'creds.json');
+        const credsPath = path.join(authDir, 'creds.json');
         if (!existsSync(credsPath))
             return false;
         const fileContent = fs.readFileSync(credsPath, 'utf8');
@@ -144,32 +144,11 @@ function hasValidSession() {
 }
 async function initializeSession() {
     ensureSessionDirectory();
-    const txt = config.sessionId;
-    if (!txt) {
-        if (hasValidSession()) {
-            printLog('success', 'Existing session found. Using saved credentials');
-            return true;
-        }
-        return false;
-    }
     if (hasValidSession())
-        return true;
-    try {
-        await SaveCreds(txt);
-        await delay(2000);
-        if (hasValidSession()) {
-            printLog('success', 'Session file verified and valid');
-            await delay(1000);
-            return true;
-        }
-        else {
-            throw new Error('Downloaded SESSION_ID is not registered with WhatsApp. Generate a new Session ID after linking the number.');
-        }
-    }
-    catch (error) {
-        printLog('error', `Error downloading session: ${error.message}`);
-        throw new Error(`SESSION_ID could not be loaded: ${error.message}`);
-    }
+        printLog('success', `Existing local auth found in ${authDir}`);
+    else
+        printLog('info', `Starting fresh local auth in ${authDir}`);
+    return hasValidSession();
 }
 server.listen(PORT, () => {
     printLog('success', `Server listening on port ${PORT}`);
@@ -179,7 +158,7 @@ async function startQasimDev() {
         const { version } = await fetchLatestBaileysVersion();
         ensureSessionDirectory();
         await delay(1000);
-        const { state, saveCreds } = await useMultiFileAuthState(`./session`);
+        const { state, saveCreds } = await useMultiFileAuthState(authDir);
         const _saveCreds = async () => {
             ensureSessionDirectory();
             await saveCreds();
@@ -386,7 +365,7 @@ async function startQasimDev() {
                 catch (error) {
                     if (attempt < 3) {
                         try {
-                            rmSync('./session', { recursive: true, force: true });
+                            rmSync(authDir, { recursive: true, force: true });
                         }
                         catch (_e) { /* ignore */ }
                         await delay(3000);
@@ -417,13 +396,12 @@ async function startQasimDev() {
             if (connection)
                 printLog('connection', `WhatsApp connection state: ${connection}`);
             if (qr) {
-                if (!pairingCode) {
-                    try {
-                        console.log(await QRCode.toString(qr, { type: 'terminal', small: true }));
-                    }
-                    catch (_e) {
-                        console.log('QR:', qr);
-                    }
+                printLog('info', 'QR code received. Scan it from WhatsApp Linked Devices.');
+                try {
+                    console.log(await QRCode.toString(qr, { type: 'terminal', small: true }));
+                }
+                catch (_e) {
+                    console.log('QR:', qr);
                 }
             }
             if (connection === "open") {
@@ -484,7 +462,7 @@ async function startQasimDev() {
                 const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401;
                 if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
                     try {
-                        rmSync('./session', { recursive: true, force: true });
+                        rmSync(authDir, { recursive: true, force: true });
                     }
                     catch (_e) { /* ignore */ }
                     await delay(3000);
@@ -538,7 +516,7 @@ async function main() {
 }
 main();
 // Session cleanup interval
-const sessionDir = path.join(process.cwd(), 'session');
+const sessionDir = authDir;
 setInterval(() => {
     if (!fs.existsSync(sessionDir))
         return;
