@@ -2,6 +2,7 @@ import 'dotenv/config';
 
 const env = (name, fallback = '') => process.env[name] ?? fallback;
 const _prefixes = env('PREFIXES') ? env('PREFIXES').split(',') : ['.', '!', '/', '#'];
+const pairingNumber = env('PAIRING_NUMBER').trim();
 const config = {
     // Bot Identity
     botName: env('BOT_NAME', 'MEGA-MD'),
@@ -21,8 +22,8 @@ const config = {
     updateZipUrl: env('UPDATE_URL', 'https://github.com/GlobalTechInfo/MEGA-MD/archive/refs/heads/main.zip'),
     ytChannel: env('YT_CHANNEL', 'GlobalTechInfo'),
     // Session
-    sessionId: env('SESSION_ID').trim(),
-    pairingNumber: env('PAIRING_NUMBER').trim(),
+    sessionId: pairingNumber ? '' : env('SESSION_ID').trim(),
+    pairingNumber,
     // Performance
     port: Number(env('PORT', 5000)) || 5000,
     maxStoreMessages: Number(env('MAX_STORE_MESSAGES', 20)) || 20,
