@@ -144,11 +144,14 @@ function hasValidSession() {
 }
 async function initializeSession() {
     ensureSessionDirectory();
-    if (hasValidSession())
+    if (hasValidSession()) {
         printLog('success', `Existing local auth found in ${authDir}`);
-    else
-        printLog('info', `Starting fresh local auth in ${authDir}`);
-    return hasValidSession();
+        return true;
+    }
+    printLog('info', `Starting fresh local auth in ${authDir}`);
+    rmSync(authDir, { recursive: true, force: true });
+    ensureSessionDirectory();
+    return false;
 }
 server.listen(PORT, () => {
     printLog('success', `Server listening on port ${PORT}`);
