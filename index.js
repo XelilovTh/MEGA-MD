@@ -126,11 +126,7 @@ function hasValidSession() {
                 return false;
             }
             if (creds.registered === false) {
-                printLog('warning', 'Session not registered. Clearing for fresh pairing...');
-                try {
-                    rmSync(path.join(__dirname, 'session'), { recursive: true, force: true });
-                }
-                catch (_e) { /* ignore */ }
+                printLog('error', 'Session credentials are not registered with WhatsApp');
                 return false;
             }
             printLog('success', 'Valid and registered session credentials found');
@@ -167,8 +163,7 @@ async function initializeSession() {
             return true;
         }
         else {
-            printLog('error', 'Session file not valid after download');
-            return false;
+            throw new Error('Downloaded SESSION_ID is not registered with WhatsApp. Generate a new Session ID after linking the number.');
         }
     }
     catch (error) {
