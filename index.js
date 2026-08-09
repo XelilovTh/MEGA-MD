@@ -173,7 +173,7 @@ async function initializeSession() {
     }
     catch (error) {
         printLog('error', `Error downloading session: ${error.message}`);
-        return false;
+        throw new Error(`SESSION_ID could not be loaded: ${error.message}`);
     }
 }
 server.listen(PORT, () => {

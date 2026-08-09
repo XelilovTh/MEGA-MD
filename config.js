@@ -21,8 +21,8 @@ const config = {
     updateZipUrl: env('UPDATE_URL', 'https://github.com/GlobalTechInfo/MEGA-MD/archive/refs/heads/main.zip'),
     ytChannel: env('YT_CHANNEL', 'GlobalTechInfo'),
     // Session
-    sessionId: env('SESSION_ID'),
-    pairingNumber: env('PAIRING_NUMBER'),
+    sessionId: env('SESSION_ID').trim(),
+    pairingNumber: env('PAIRING_NUMBER').trim(),
     // Performance
     port: Number(env('PORT', 5000)) || 5000,
     maxStoreMessages: Number(env('MAX_STORE_MESSAGES', 20)) || 20,
