@@ -414,6 +414,8 @@ async function startQasimDev() {
         }
         QasimDev.ev.on('connection.update', async (s) => {
             const { connection, lastDisconnect, qr } = s;
+            if (connection)
+                printLog('connection', `WhatsApp connection state: ${connection}`);
             if (qr) {
                 if (!pairingCode) {
                     try {
@@ -472,6 +474,10 @@ async function startQasimDev() {
                 printLog('info', `Prefixes   : ${config.prefixes.join(', ')}`);
                 printLog('store', `Backend    : ${store.getStats().backend}`);
                 console.log();
+            }
+            if (connection === 'close' && lastDisconnect?.error) {
+                const statusCode = lastDisconnect.error.output?.statusCode || lastDisconnect.error.statusCode || 'unknown';
+                printLog('error', `WhatsApp connection closed (status: ${statusCode}): ${lastDisconnect.error.message || 'unknown error'}`);
             }
             if (connection === 'close') {
                 const statusCode = lastDisconnect?.error?.output?.statusCode;
