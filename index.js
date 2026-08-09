@@ -350,7 +350,13 @@ async function startQasimDev() {
                     rl.close();
                 process.exit(1);
             }
+            let pairingTimer = null;
+            let connectionOpen = false;
             const doPairing = async (num, attempt = 1) => {
+                if (connectionOpen) {
+                    printLog('info', 'Pairing skipped because WhatsApp is already connected');
+                    return;
+                }
                 try {
                     printLog('info', 'Requesting WhatsApp pairing code...');
                     let code = await QasimDev.requestPairingCode(num);
@@ -376,7 +382,7 @@ async function startQasimDev() {
                     }
                 }
             };
-            setTimeout(() => doPairing(phoneNumberInput), 3000);
+            pairingTimer = setTimeout(() => doPairing(phoneNumberInput), 3000);
         }
         else if (isRegistered) {
             if (rl && !rlClosed) {
@@ -395,6 +401,15 @@ async function startQasimDev() {
             const { connection, lastDisconnect, qr } = s;
             if (connection)
                 printLog('connection', `WhatsApp connection state: ${connection}`);
+            if (connection === 'open' && pairingTimer) {
+                connectionOpen = true;
+                clearTimeout(pairingTimer);
+                pairingTimer = null;
+                printLog('info', 'Pairing request cancelled because WhatsApp connection is open');
+            }
+            else if (connection === 'open') {
+                connectionOpen = true;
+            }
             if (qr) {
                 printLog('info', 'QR code received. Scan it from WhatsApp Linked Devices.');
                 try {
