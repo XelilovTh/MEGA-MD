@@ -348,6 +348,7 @@ async function startQasimDev() {
         if (pairingCode && !isRegistered) {
             if (useMobile)
                 throw new Error('Cannot use pairing code with mobile api');
+            printLog('info', `Pairing mode active (number configured: ${Boolean(config.pairingNumber || process.env.PAIRING_NUMBER)})`);
             let phoneNumberInput;
             if (config.pairingNumber) {
                 phoneNumberInput = config.pairingNumber;
@@ -372,6 +373,7 @@ async function startQasimDev() {
             }
             const doPairing = async (num, attempt = 1) => {
                 try {
+                    printLog('info', 'Requesting WhatsApp pairing code...');
                     let code = await QasimDev.requestPairingCode(num);
                     code = code?.match(/.{1,4}/g)?.join("-") || code;
                     console.log(chalk.black(chalk.bgGreen(`Your Pairing Code : `)), chalk.black(chalk.white(code)));
@@ -518,6 +520,7 @@ async function main() {
     await compileAll();
     await commandHandler.loadCommands();
     printLog('info', 'Starting MEGA MD BOT...');
+    printLog('info', `Authentication mode: ${config.pairingNumber ? 'pairing' : config.sessionId ? 'session' : 'qr/default'}`);
     await initializeSession();
     await delay(3000);
     startQasimDev().catch((error) => {
