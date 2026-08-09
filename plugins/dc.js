@@ -29,7 +29,7 @@ export default {
         const jid = chatId || message.key.remoteJid;
 
         // Use same env var as gemini.js, fallback to DC_GEMINI_API
-        const apiKey = process.env.DC_GEMINI_API || process.env.GEMINI_API_KEY || config?.GEMINI_API_KEY;
+        const apiKey = process.env.DC_GEMINI_API || process.env.DC_GEMINI_API_KEY || process.env.GEMINI_API_KEY || config?.DC_GEMINI_API || config?.GEMINI_API_KEY;
         if (!apiKey) {
             return await sock.sendMessage(jid, {
                 text: '❌ *Gemini API açarı tapılmadı!*\n\n`.env` faylına əlavə et:\n`DC_GEMINI_API` = API_AÇARINIZ\n\n🔗 https://aistudio.google.com/apikey',
