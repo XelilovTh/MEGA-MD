@@ -126,12 +126,8 @@ function hasValidSession() {
                 return false;
             }
             if (creds.registered === false) {
-                printLog('warning', 'Session not registered. Clearing for fresh pairing...');
-                try {
-                    rmSync(path.join(__dirname, 'session'), { recursive: true, force: true });
-                }
-                catch (_e) { /* ignore */ }
-                return false;
+                printLog('warning', 'Session not registered yet. Attempting to use it...');
+                return true;
             }
             printLog('success', 'Valid and registered session credentials found');
             return true;
