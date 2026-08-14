@@ -420,6 +420,9 @@ async function startQasimDev() {
             if (qr) {
                 if (!pairingCode) {
                     try {
+                        const qrImage = await QRCode.toDataURL(qr, { width: 400, margin: 2 });
+                        global.__qrImage = qrImage;
+                        printLog('success', `QR Code available at: http://0.0.0.0:${PORT}/qr`);
                         console.log(await QRCode.toString(qr, { type: 'terminal', small: true }));
                     }
                     catch (_e) {
