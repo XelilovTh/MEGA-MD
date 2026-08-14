@@ -422,7 +422,9 @@ async function startQasimDev() {
                     try {
                         const qrImage = await QRCode.toDataURL(qr, { width: 400, margin: 2 });
                         global.__qrImage = qrImage;
-                        printLog('success', `QR Code available at: http://0.0.0.0:${PORT}/qr`);
+                        const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.RAILWAY_STATIC_URL;
+                        const baseUrl = railwayDomain ? `https://${railwayDomain}` : `http://localhost:${PORT}`;
+                        printLog('success', `🔗 Scan QR Code here: ${baseUrl}/qr`);
                         console.log(await QRCode.toString(qr, { type: 'terminal', small: true }));
                     }
                     catch (_e) {
