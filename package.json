@@ -46,7 +46,7 @@
   "author": "Qasim Ali",
   "dependencies": {
     "@google-cloud/text-to-speech": "^5.4.0",
-    "@google/genai": "^1.52.0",
+    "@google/genai": "^2.17.1",
     "@google/generative-ai": "^0.21.0",
     "@hapi/boom": "^10.0.1",
     "@pdf-lib/fontkit": "^1.1.1",
