@@ -23,7 +23,7 @@ export default {
     command: 'gemini',
     aliases: ['ai', 'gemi', 'ask'],
     category: 'ai',
-    description: 'Gemini 2.5 Flash AI ilə söhbət et.',
+    description: 'Gemini AI ilə söhbət et.',
     usage: '.gemini <sualın> | .gemini reset',
 
     ownerOnly: false,
@@ -47,7 +47,7 @@ export default {
 
         if (!input) {
             return await sock.sendMessage(chatId, {
-                text: `🤖 *Gemini 2.5 Flash*\n\n*İstifadə:*\n• \`.gemini sualın\` — AI ilə söhbət et\n• \`.gemini reset\` — söhbəti sıfırla\n\n💡 _Söhbət konteksti 30 dəqiqə saxlanılır_`,
+                text: `🤖 *Gemini AI*\n\n*İstifadə:*\n• \`.gemini sualın\` — AI ilə söhbət et\n• \`.gemini reset\` — söhbəti sıfırla\n\n💡 _Söhbət konteksti 30 dəqiqə saxlanılır_`,
                 ...channelInfo
             }, { quoted: message });
         }
@@ -71,9 +71,9 @@ export default {
 
             const history = chatHistory.get(senderId) || [];
 
-            // Söhbəti qur
+            // Model adı 'gemini-1.5-flash' olaraq düzəldildi
             const chat = ai.chats.create({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-1.5-flash',
                 config: {
                     systemInstruction: 'Sən MEGA-MD WhatsApp botunun AI köməkçisisən. Qısa və aydın cavablar ver. WhatsApp formatlamasından istifadə et: *qalın*, _italic_. Azərbaycan dilində sual gəlirsə Azərbaycan dilində cavab ver.',
                     maxOutputTokens: 1024,
@@ -113,6 +113,8 @@ export default {
 
             if (err.message?.includes('API key not valid') || err.message?.includes('INVALID_ARGUMENT')) {
                 errMsg = '❌ *API açarı yanlışdır!*\nRailway → Variables → `GEMINI_API_KEY` dəyərini yoxla.';
+            } else if (err.message?.includes('404') || err.message?.includes('NOT_FOUND')) {
+                errMsg = '❌ *Model tapılmadı!* Model adının düzgünlüyünü yoxlayın.';
             } else if (err.message?.includes('quota') || err.message?.includes('RESOURCE_EXHAUSTED')) {
                 errMsg = '⚠️ *Gemini API limiti doldu.* Bir az gözləyib yenidən cəhd et.';
             } else if (err.message?.includes('SAFETY')) {
