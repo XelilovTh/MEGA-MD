@@ -30,6 +30,8 @@ export default {
 
         // Use same env var as gemini.js, fallback to DC_GEMINI_API
         const apiKey = process.env.DC_GEMINI_API || process.env.GEMINI_API_KEY || config?.GEMINI_API_KEY;
+        console.log('[DC Plugin] Key source:', process.env.DC_GEMINI_API ? 'DC_GEMINI_API' : process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY' : 'config');
+        console.log('[DC Plugin] Key prefix:', apiKey ? apiKey.substring(0, 8) + '...' : 'NONE');
         if (!apiKey) {
             return await sock.sendMessage(jid, {
                 text: '❌ *Gemini API açarı tapılmadı!*\n\n`.env` faylına əlavə et:\n`DC_GEMINI_API` = API_AÇARINIZ\n\n🔗 https://aistudio.google.com/apikey',
