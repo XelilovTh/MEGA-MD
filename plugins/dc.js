@@ -62,7 +62,7 @@ export default {
             const ai = new GoogleGenAI({ apiKey });
 
             const chat = ai.chats.create({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-2.0-flash',
                 config: {
                     systemInstruction: SYSTEM_PROMPT,
                     maxOutputTokens: 200,

@@ -73,7 +73,7 @@ export default {
 
             // Söhbəti qur
             const chat = ai.chats.create({
-                model: 'gemini-2.5-flash',
+                model: 'gemini-2.0-flash',
                 config: {
                     systemInstruction: 'Sən MEGA-MD WhatsApp botunun AI köməkçisisən. Qısa və aydın cavablar ver. WhatsApp formatlamasından istifadə et: *qalın*, _italic_. Azərbaycan dilində sual gəlirsə Azərbaycan dilində cavab ver.',
                     maxOutputTokens: 1024,
