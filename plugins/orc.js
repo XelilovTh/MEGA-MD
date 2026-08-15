@@ -69,7 +69,7 @@ export default {
             const ai = new GoogleGenAI({ apiKey });
 
             const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash-lite',
+                model: 'gemini-3.5-flash',
                 contents: [{
                     parts: [
                         { inlineData: { mimeType, data: base64Image } },
