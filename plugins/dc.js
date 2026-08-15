@@ -65,7 +65,7 @@ export default {
                 model: 'gemini-3.5-flash',
                 config: {
                     systemInstruction: SYSTEM_PROMPT,
-                    maxOutputTokens: 200,
+                    maxOutputTokens: 500,
                     temperature: 1.2,
                 },
                 history: []
