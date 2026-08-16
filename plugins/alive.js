@@ -42,10 +42,7 @@ export default {
                 `*Platform:* ${platform} (${arch})\n` +
                 `*Node.js:* ${nodeVersion}\n`;
             await sock.sendMessage(chatId, {
-                text,
-                contextInfo: {
-                    }
-                }
+                text
             }, { quoted: message });
         }
         catch (error) {

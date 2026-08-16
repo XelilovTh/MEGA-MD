@@ -7,26 +7,21 @@ export default {
     usage: '.pair 92305395XXXX',
     async handler(sock, message, args, context) {
         const { chatId } = context;
-        const forwardInfo = {
-            }
-        };
+
         const query = args.join('').trim();
         if (!query) {
             return await sock.sendMessage(chatId, {
-                text: "❌ *Missing Number*\nExample: .pair 92305395XXXX",
-                contextInfo: forwardInfo
+                text: "❌ *Missing Number*\nExample: .pair 92305395XXXX"
             }, { quoted: message });
         }
         const number = query.replace(/[^0-9]/g, '');
         if (number.length < 10 || number.length > 15) {
             return await sock.sendMessage(chatId, {
-                text: "❌ *Invalid Format*\nPlease provide the number with country code but without + or spaces.",
-                contextInfo: forwardInfo
+                text: "❌ *Invalid Format*\nPlease provide the number with country code but without + or spaces."
             }, { quoted: message });
         }
         await sock.sendMessage(chatId, {
-            text: "⚡ *Requesting code from server...*",
-            contextInfo: forwardInfo
+            text: "⚡ *Requesting code from server...*"
         }, { quoted: message });
         try {
             const response = await axios.get(`https://mega-pairing.onrender.com/pair?number=${number}`, {
@@ -46,8 +41,7 @@ export default {
                     `4. Select 'Link with phone number instead'\n` +
                     `5. Enter the code above.`;
                 await sock.sendMessage(chatId, {
-                    text: successText,
-                    contextInfo: forwardInfo
+                    text: successText
                 }, { quoted: message });
             }
             else {
@@ -67,8 +61,7 @@ export default {
                 errorMsg += "The server is currently offline or busy. Try again later.";
             }
             await sock.sendMessage(chatId, {
-                text: errorMsg,
-                contextInfo: forwardInfo
+                text: errorMsg
             }, { quoted: message });
         }
     }

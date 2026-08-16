@@ -36,10 +36,7 @@ export default {
                 .toBuffer();
             await sock.sendMessage(chatId, {
                 image: blurredImage,
-                caption: '✨ *Image Blurred Successfully!*',
-                contextInfo: {
-                    }
-                }
+                caption: '✨ *Image Blurred Successfully!*'
             }, { quoted: message });
         }
         catch (error) {

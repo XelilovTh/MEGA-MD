@@ -112,12 +112,10 @@ export default {
             menuText += `├─ ${fastEmoji} Fast Response\n`;
             menuText += `├─ ${slowEmoji} Slow Response\n`;
             menuText += `⁠└────────────────`;
-            const contextInfo = {
-                }
-            };
+
             const messageOptions = thumbnail
-                ? { image: thumbnail, caption: menuText, contextInfo }
-                : { text: menuText, contextInfo };
+                ? { image: thumbnail, caption: menuText }
+                : { text: menuText };
             await sock.sendMessage(chatId, messageOptions, { quoted: message });
         }
         catch (error) {

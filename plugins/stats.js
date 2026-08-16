@@ -36,10 +36,7 @@ export default {
                 text += `   ↳ Status: ${errorText}\n\n`;
             });
             await sock.sendMessage(chatId, {
-                text: text.trim(),
-                contextInfo: {
-                    }
-                }
+                text: text.trim()
             }, { quoted: message });
         }
         catch (error) {

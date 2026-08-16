@@ -31,19 +31,13 @@ export default {
             const imageBuffer = Buffer.from(await response.arrayBuffer());
             await sock.sendMessage(chatId, {
                 image: imageBuffer,
-                caption: '*your religion is simping*',
-                contextInfo: {
-                    }
-                }
+                caption: '*your religion is simping*'
             }, { quoted: message });
         }
         catch (error) {
             console.error('Simp Command Error:', error);
             await sock.sendMessage(chatId, {
-                text: '❌ Sorry, I couldn\'t generate the simp card. Please try again later!',
-                contextInfo: {
-                    }
-                }
+                text: '❌ Sorry, I couldn\'t generate the simp card. Please try again later!'
             }, { quoted: message });
         }
     }

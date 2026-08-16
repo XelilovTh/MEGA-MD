@@ -108,9 +108,6 @@ export function startSchedulerEngine(sock) {
                     try {
                         await sock.sendMessage(item.chatId, {
                             text: item.message,
-                            contextInfo: {
-                                }
-                            }
                         });
                         console.log(`[SCHEDULE] ✅ Sent message ID:${item.id} to ${item.chatId}`);
                     }

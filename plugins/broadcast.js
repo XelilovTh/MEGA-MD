@@ -39,10 +39,7 @@ export default {
         for (const groupJid of groups) {
             try {
                 await sock.sendMessage(groupJid, {
-                    text: broadcastText,
-                    contextInfo: {
-                        }
-                    }
+                    text: broadcastText
                 });
                 sent++;
             }

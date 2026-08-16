@@ -40,10 +40,7 @@ export default {
         for (const contactJid of contacts) {
             try {
                 await sock.sendMessage(contactJid, {
-                    text: broadcastText,
-                    contextInfo: {
-                        }
-                    }
+                    text: broadcastText
                 });
                 sent++;
             }

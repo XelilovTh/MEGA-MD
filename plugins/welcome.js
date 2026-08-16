@@ -22,11 +22,7 @@ async function handleJoinEvent(sock, id, participants) {
     const groupMetadata = await sock.groupMetadata(id);
     const groupName = groupMetadata.subject;
     const groupDesc = groupMetadata.desc || 'No description available';
-    const channelInfo = {
-        contextInfo: {
-            }
-        }
-    };
+
     for (const participant of participants) {
         try {
             const participantString = typeof participant === 'string' ? participant : (participant.id || participant.toString());
@@ -86,8 +82,7 @@ async function handleJoinEvent(sock, id, participants) {
                     await sock.sendMessage(id, {
                         image: imageBuffer,
                         caption: finalMessage,
-                        mentions: [participantString],
-                        ...channelInfo
+                        mentions: [participantString]
                     });
                     continue;
                 }
@@ -97,8 +92,7 @@ async function handleJoinEvent(sock, id, participants) {
             }
             await sock.sendMessage(id, {
                 text: finalMessage,
-                mentions: [participantString],
-                ...channelInfo
+                mentions: [participantString]
             });
         }
         catch (error) {
@@ -117,8 +111,7 @@ async function handleJoinEvent(sock, id, participants) {
             }
             await sock.sendMessage(id, {
                 text: fallbackMessage,
-                mentions: [participantString],
-                ...channelInfo
+                mentions: [participantString]
             });
         }
     }
