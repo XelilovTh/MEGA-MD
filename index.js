@@ -442,7 +442,6 @@ async function startQasimDev() {
                     await QasimDev.sendMessage(botNumber, {
                         text: `🤖 Bot Connected Successfully!\n\n⏰ Time: ${new Date().toLocaleString()}\n✅ Status: Online and Ready!${ghostStatus}`
                     });
-                    });
                 }
                 catch (error) {
                     printLog('error', `Failed to send connection message: ${error.message}`);
