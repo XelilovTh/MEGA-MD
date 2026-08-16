@@ -38,12 +38,6 @@ export default {
             await sock.sendMessage(chatId, {
                 text: text.trim(),
                 contextInfo: {
-                    forwardingScore: 999,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363319098372999@newsletter',
-                        newsletterName: 'MEGA MD PERFORMANCE',
-                        serverMessageId: -1
                     }
                 }
             }, { quoted: message });

@@ -24,12 +24,6 @@ async function handleJoinEvent(sock, id, participants) {
     const groupDesc = groupMetadata.desc || 'No description available';
     const channelInfo = {
         contextInfo: {
-            forwardingScore: 1,
-            isForwarded: true,
-            forwardedNewsletterMessageInfo: {
-                newsletterJid: '120363319098372999@newsletter',
-                newsletterName: 'MEGA MD',
-                serverMessageId: -1
             }
         }
     };

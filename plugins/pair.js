@@ -8,12 +8,6 @@ export default {
     async handler(sock, message, args, context) {
         const { chatId } = context;
         const forwardInfo = {
-            forwardingScore: 1,
-            isForwarded: true,
-            forwardedNewsletterMessageInfo: {
-                newsletterJid: '120363319098372999@newsletter',
-                newsletterName: 'MEGA MD',
-                serverMessageId: -1
             }
         };
         const query = args.join('').trim();
